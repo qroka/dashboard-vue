@@ -77,7 +77,7 @@ const isMobile = breakpoints.smaller('lg')
   </UDashboardPanel>
 
   <InboxMail v-if="selectedMail" :mail="selectedMail" @close="selectedMail = null" />
-  <div v-else class="hidden lg:flex flex-1 items-center justify-center">
+  <div v-else class="hidden min-h-0 flex-1 items-center justify-center bg-default lg:flex">
     <UIcon name="i-lucide-inbox" class="size-32 text-dimmed" />
   </div>
 

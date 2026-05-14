@@ -17,6 +17,9 @@ export default defineConfig({
         colors: {
           primary: 'green',
           neutral: 'zinc'
+        },
+        dashboardGroup: {
+          base: 'fixed inset-0 flex overflow-hidden bg-default'
         }
       }
     })

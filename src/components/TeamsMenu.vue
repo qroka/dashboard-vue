@@ -1,46 +1,30 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
+import TeamLogoMark from './TeamLogoMark.vue'
 
 defineProps<{
   collapsed?: boolean
 }>()
 
-const teams = ref([{
-  label: 'Vue',
-  avatar: {
-    src: 'https://github.com/vuejs.png',
-    alt: 'Vue'
+const teams = ref([
+  {
+    label: 'CRM | График',
+    slot: 'team' as const
   }
-}, {
-  label: 'Vite',
-  avatar: {
-    src: 'https://github.com/vitejs.png',
-    alt: 'Vite'
-  }
-}, {
-  label: 'Vitest',
-  avatar: {
-    src: 'https://github.com/vitest-dev.png',
-    alt: 'Vitest'
-  }
-}])
+])
+
 const selectedTeam = ref(teams.value[0])
 
-const items = computed<DropdownMenuItem[][]>(() => {
-  return [teams.value.map(team => ({
-    ...team,
+const items = computed<DropdownMenuItem[][]>(() => [
+  teams.value.map(team => ({
+    label: team.label,
+    slot: team.slot,
     onSelect() {
       selectedTeam.value = team
     }
-  })), [{
-    label: 'Create team',
-    icon: 'i-lucide-circle-plus'
-  }, {
-    label: 'Manage teams',
-    icon: 'i-lucide-cog'
-  }]]
-})
+  }))
+])
 </script>
 
 <template>
@@ -49,12 +33,13 @@ const items = computed<DropdownMenuItem[][]>(() => {
     :content="{ align: 'center', collisionPadding: 12 }"
     :ui="{ content: collapsed ? 'w-40' : 'w-(--reka-dropdown-menu-trigger-width)' }"
   >
+    <template #team-leading>
+      <TeamLogoMark />
+    </template>
+
     <UButton
-      v-bind="{
-        ...selectedTeam,
-        label: collapsed ? undefined : selectedTeam?.label,
-        trailingIcon: collapsed ? undefined : 'i-lucide-chevrons-up-down'
-      }"
+      :label="collapsed ? undefined : selectedTeam?.label"
+      :trailing-icon="collapsed ? undefined : 'i-lucide-chevrons-up-down'"
       color="neutral"
       variant="ghost"
       block
@@ -64,6 +49,10 @@ const items = computed<DropdownMenuItem[][]>(() => {
       :ui="{
         trailingIcon: 'text-dimmed'
       }"
-    />
+    >
+      <template #leading>
+        <TeamLogoMark />
+      </template>
+    </UButton>
   </UDropdownMenu>
 </template>

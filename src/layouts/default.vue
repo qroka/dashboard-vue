@@ -1,95 +1,41 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref } from 'vue'
 import { useStorage } from '@vueuse/core'
 import type { NavigationMenuItem } from '@nuxt/ui'
+import { schedulePathForSlug, scheduleTitleOptions } from '../data/schedule-mock'
 
 const toast = useToast()
-const route = useRoute()
 
 const open = ref(false)
 
+const scheduleNavChildren = scheduleTitleOptions.map(opt => ({
+  label: opt.label,
+  to: schedulePathForSlug(opt.value),
+  exact: opt.value === 'general',
+  icon: 'icon' in opt ? opt.icon : undefined,
+  avatar: 'avatar' in opt ? opt.avatar : undefined,
+  onSelect: () => {
+    open.value = false
+  }
+})) satisfies NavigationMenuItem[]
+
 const links = [[{
-  label: 'Home',
-  icon: 'i-lucide-house',
-  to: '/',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
-  label: 'Inbox',
-  icon: 'i-lucide-inbox',
-  to: '/inbox',
-  badge: '4',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
-  label: 'Customers',
-  icon: 'i-lucide-users',
-  to: '/customers',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
-  label: 'Settings',
-  to: '/settings',
-  icon: 'i-lucide-settings',
+  slot: 'schedule-nav',
+  label: 'График заместителей',
+  icon: 'i-lucide-calendar-range',
+  to: '/schedule',
   defaultOpen: true,
   type: 'trigger',
-  children: [{
-    label: 'General',
-    to: '/settings',
-    exact: true,
-    onSelect: () => {
-      open.value = false
-    }
-  }, {
-    label: 'Members',
-    to: '/settings/members',
-    onSelect: () => {
-      open.value = false
-    }
-  }, {
-    label: 'Notifications',
-    to: '/settings/notifications',
-    onSelect: () => {
-      open.value = false
-    }
-  }, {
-    label: 'Security',
-    to: '/settings/security',
-    onSelect: () => {
-      open.value = false
-    }
-  }]
+  children: scheduleNavChildren
 }], [{
-  label: 'Feedback',
+  label: 'Обратная связь',
   icon: 'i-lucide-message-circle',
   to: 'https://github.com/nuxt-ui-templates/dashboard-vue',
-  target: '_blank'
-}, {
-  label: 'Help & Support',
-  icon: 'i-lucide-info',
-  to: 'https://github.com/nuxt/ui',
-  target: '_blank'
+  target: '_blank',
+  onSelect: () => {
+    open.value = false
+  }
 }]] satisfies NavigationMenuItem[][]
-
-const groups = computed(() => [{
-  id: 'links',
-  label: 'Go to',
-  items: links.flat()
-}, {
-  id: 'code',
-  label: 'Code',
-  items: [{
-    id: 'source',
-    label: 'View page source',
-    icon: 'simple-icons:github',
-    to: `https://github.com/nuxt-ui-templates/dashboard-vue/blob/main/src/pages${route.path === '/' ? '/index' : route.path}.vue`,
-    target: '_blank'
-  }]
-}])
 
 const cookie = useStorage('cookie-consent', 'pending')
 if (cookie.value !== 'accepted') {
@@ -120,7 +66,7 @@ if (cookie.value !== 'accepted') {
       v-model:open="open"
       collapsible
       resizable
-      class="bg-elevated/25"
+      class="bg-default"
       :ui="{ footer: 'lg:border-t lg:border-default' }"
     >
       <template #header="{ collapsed }">
@@ -128,17 +74,76 @@ if (cookie.value !== 'accepted') {
       </template>
 
       <template #default="{ collapsed }">
-        <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" />
-
         <UNavigationMenu
           :collapsed="collapsed"
           :items="links[0]"
           orientation="vertical"
           tooltip
-          popover
-        />
+          :popover="{ content: { side: 'right', align: 'start', alignOffset: 2 } }"
+        >
+          <template #schedule-nav-content="{ item, ui }">
+            <ul data-slot="childList" :class="ui.childList()">
+              <li data-slot="childLabel" :class="ui.childLabel()">
+                {{ item.label }}
+              </li>
+              <li
+                v-for="(childItem, childIndex) in item.children || []"
+                :key="childIndex"
+                data-slot="childItem"
+                :class="ui.childItem()"
+              >
+                <RouterLink
+                  v-if="childItem.to"
+                  v-slot="{ href, navigate, isActive, isExactActive }"
+                  :to="childItem.to"
+                  :exact="Boolean(childItem.exact)"
+                  custom
+                >
+                  <a
+                    :href="href"
+                    data-slot="childLink"
+                    :class="ui.childLink({
+                      active: childItem.exact ? isExactActive : isActive
+                    })"
+                    @click="(e) => {
+                      navigate(e)
+                      childItem.onSelect?.()
+                    }"
+                  >
+                    <UAvatar
+                      v-if="childItem.avatar"
+                      v-bind="childItem.avatar"
+                      size="2xs"
+                      data-slot="linkLeadingAvatar"
+                      :class="ui.linkLeadingAvatar({
+                        active: childItem.exact ? isExactActive : isActive
+                      })"
+                    />
+                    <UIcon
+                      v-else-if="childItem.icon"
+                      :name="childItem.icon"
+                      data-slot="childLinkIcon"
+                      :class="ui.childLinkIcon({
+                        active: childItem.exact ? isExactActive : isActive
+                      })"
+                    />
+                    <span
+                      data-slot="childLinkLabel"
+                      :class="ui.childLinkLabel({
+                        active: childItem.exact ? isExactActive : isActive
+                      })"
+                    >
+                      {{ childItem.label }}
+                    </span>
+                  </a>
+                </RouterLink>
+              </li>
+            </ul>
+          </template>
+        </UNavigationMenu>
 
         <UNavigationMenu
+          v-if="links[1].length"
           :collapsed="collapsed"
           :items="links[1]"
           orientation="vertical"
@@ -151,8 +156,6 @@ if (cookie.value !== 'accepted') {
         <UserMenu :collapsed="collapsed" />
       </template>
     </UDashboardSidebar>
-
-    <UDashboardSearch :groups="groups" />
 
     <RouterView />
 

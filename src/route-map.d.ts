@@ -14,11 +14,15 @@ import type {
   ParamValueZeroOrMore,
   ParamValueZeroOrOne,
 } from 'vue-router'
+import type {
+  _ExtractParamParserType,
+} from 'vue-router/experimental'
 
 declare module 'vue-router' {
   interface TypesConfig {
     ParamParsers:
       | never
+    RouteNamedMap: import('vue-router/auto-routes').RouteNamedMap
   }
 }
 
@@ -46,6 +50,20 @@ declare module 'vue-router/auto-routes' {
       '/inbox',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/schedule/': RouteRecordInfo<
+      '/schedule/',
+      '/schedule',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/schedule/[substitute]': RouteRecordInfo<
+      '/schedule/[substitute]',
+      '/schedule/:substitute',
+      { substitute: ParamValue<true> },
+      { substitute: ParamValue<false> },
       | never
     >,
     '/settings': RouteRecordInfo<
@@ -114,6 +132,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/inbox.vue': {
       routes:
         | '/inbox'
+      views:
+        | never
+    }
+    'src/pages/schedule/index.vue': {
+      routes:
+        | '/schedule/'
+      views:
+        | never
+    }
+    'src/pages/schedule/[substitute].vue': {
+      routes:
+        | '/schedule/[substitute]'
       views:
         | never
     }
