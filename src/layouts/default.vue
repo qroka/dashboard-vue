@@ -30,7 +30,7 @@ const links = [[{
 }], [{
   label: 'Обратная связь',
   icon: 'i-lucide-message-circle',
-  to: 'https://github.com/nuxt-ui-templates/dashboard-vue',
+  to: 'https://forms.yandex.ru/u/6a05984a902902136ca191e3',
   target: '_blank',
   onSelect: () => {
     open.value = false
