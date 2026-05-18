@@ -21,6 +21,19 @@ import {
 import ScheduleEventSlideover from './ScheduleEventSlideover.vue'
 import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue'
 
+/** Карточка на доске: столбец = день (`ScheduleDateBlock`). */
+interface ScheduleBoardCard {
+  block: ScheduleDateBlock
+  group: ScheduleUserGroup
+  row: ScheduleRow
+  cardKey: string
+}
+
+interface ScheduleBoardColumn {
+  block: ScheduleDateBlock
+  cards: ScheduleBoardCard[]
+}
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -53,6 +66,38 @@ const dayBlockHeadings = computed(() => {
   }
   return out
 })
+
+const boardColumns = computed<ScheduleBoardColumn[]>(() =>
+  visibleBlocks.value.map(block => ({
+    block,
+    cards: block.groups.flatMap((group, gi) =>
+      group.rows.map((row, ri) => ({
+        block,
+        group,
+        row,
+        cardKey: `${block.id}-${gi}-${ri}`
+      }))
+    )
+  }))
+)
+
+function boardCardDisplayId(cardKey: string): string {
+  let h = 0
+  for (let i = 0; i < cardKey.length; i++)
+    h = (Math.imul(31, h) + cardKey.charCodeAt(i)) >>> 0
+  return `#${(h % 900) + 100}`
+}
+
+function accentCardTopBorder(accent: ScheduleUserGroup['accent']): string {
+  const map: Record<ScheduleUserGroup['accent'], string> = {
+    rose: 'border-t-4 border-t-[#e7000b]',
+    blue: 'border-t-4 border-t-[#155dfc]',
+    violet: 'border-t-4 border-t-[#7c3aed]',
+    amber: 'border-t-4 border-t-[#d97706]',
+    emerald: 'border-t-4 border-t-[#059669]'
+  }
+  return map[accent]
+}
 
 const pageTitle = computed(() =>
   scope.value === 'general'
@@ -124,6 +169,10 @@ function onScheduleRowActivate(block: ScheduleDateBlock, group: ScheduleUserGrou
   if (row.hidden)
     return
   openEventDetail(block, group, row, false)
+}
+
+function onBoardCardActivate(card: ScheduleBoardCard) {
+  onScheduleRowActivate(card.block, card.group, card.row)
 }
 
 function attachmentMenu(row: ScheduleRow): DropdownMenuItem[][] {
@@ -298,9 +347,179 @@ function cancelDeleteEvent() {
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
         <div
           v-if="view === 'board'"
-          class="text-muted flex min-h-48 shrink-0 items-center justify-center rounded-lg border border-dashed border-default text-sm"
+          class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         >
-          Режим «Доска» — заглушка (в макете активен «Список»).
+          <div
+            class="flex min-h-0 flex-1 items-stretch gap-4 overflow-x-auto overflow-y-hidden px-0.5 pb-2"
+          >
+            <div
+              v-for="col in boardColumns"
+              :key="col.block.id"
+              class="border-default flex w-[min(20rem,calc(100vw-3rem))] shrink-0 flex-col overflow-hidden rounded-xl border bg-elevated/40 dark:bg-elevated/15"
+            >
+              <div class="border-default flex shrink-0 items-center gap-2 border-b px-3 py-2.5">
+                <UIcon
+                  name="i-lucide-grip-vertical"
+                  class="size-5 shrink-0 text-dimmed"
+                  aria-hidden="true"
+                />
+                <div class="min-w-0 flex-1">
+                  <template v-if="dayBlockHeadings.has(col.block.id)">
+                    <div class="text-sm font-semibold leading-tight text-highlighted tabular-nums">
+                      {{ dayBlockHeadings.get(col.block.id)!.dayAndDate }}
+                    </div>
+                    <div class="text-xs text-muted">
+                      {{ dayBlockHeadings.get(col.block.id)!.weekday }}
+                    </div>
+                  </template>
+                  <div v-else class="text-sm font-semibold text-highlighted">
+                    {{ col.block.title }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="border-default shrink-0 border-b p-2">
+                <UButton
+                  block
+                  size="sm"
+                  color="neutral"
+                  variant="soft"
+                  disabled
+                  icon="i-lucide-plus"
+                  label="Добавить мероприятие"
+                  class="justify-center opacity-70"
+                />
+              </div>
+
+              <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+                <p
+                  v-if="!col.cards.length"
+                  class="text-muted py-6 text-center text-xs"
+                >
+                  Нет мероприятий
+                </p>
+                <template v-for="c in col.cards" :key="c.cardKey">
+                  <div
+                    v-if="!c.row.hidden"
+                    :class="[
+                      'rounded-lg border border-default bg-default p-3 shadow-sm transition-[box-shadow,transform]',
+                      accentCardTopBorder(c.group.accent),
+                      isScheduleGeneralView && accentSurfaceClass(c.group.accent),
+                      'cursor-pointer hover:-translate-y-0.5 hover:shadow-md'
+                    ]"
+                    role="button"
+                    tabindex="0"
+                    @click="onBoardCardActivate(c)"
+                    @keydown.enter.prevent="onBoardCardActivate(c)"
+                    @keydown.space.prevent="onBoardCardActivate(c)"
+                  >
+                    <div class="mb-2 flex items-start gap-2">
+                      <span class="rounded-md bg-elevated px-1.5 py-0.5 text-xs text-muted tabular-nums">
+                        {{ boardCardDisplayId(c.cardKey) }}
+                      </span>
+                      <span class="tabular-nums text-xs text-dimmed">{{ c.row.time }}</span>
+                      <div class="ms-auto shrink-0" @click.stop>
+                        <UDropdownMenu
+                          v-if="!isScheduleGeneralView"
+                          :items="rowContextMenuItems(c.block, c.group, c.row)"
+                          :content="{ align: 'end', collisionPadding: 12 }"
+                        >
+                          <UButton
+                            color="neutral"
+                            variant="ghost"
+                            square
+                            size="xs"
+                            icon="i-lucide-ellipsis"
+                            aria-label="Действия с мероприятием"
+                          />
+                        </UDropdownMenu>
+                      </div>
+                    </div>
+
+                    <div
+                      v-if="isScheduleGeneralView"
+                      class="mb-2 flex min-w-0 items-center gap-2"
+                    >
+                      <UAvatar :src="c.group.avatarSrc" size="xs" class="shrink-0" />
+                      <span class="truncate text-xs font-medium text-default">{{ c.group.name }}</span>
+                    </div>
+
+                    <p class="line-clamp-4 text-sm font-medium leading-snug text-highlighted">
+                      {{ c.row.topic }}
+                    </p>
+
+                    <p class="mt-1.5 line-clamp-2 text-xs text-muted">
+                      {{ formatSchedulePlace(c.row) }}
+                    </p>
+
+                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                      <div class="flex min-w-0 items-center">
+                        <div class="flex -space-x-1.5">
+                          <UAvatar
+                            v-for="(p, pi) in c.row.participants.slice(0, 3)"
+                            :key="pi"
+                            :src="p.avatarSrc"
+                            :alt="p.name"
+                            size="xs"
+                            class="ring-2 ring-bg"
+                          />
+                        </div>
+                        <span
+                          v-if="c.row.participants.length > 3"
+                          class="ms-1.5 shrink-0 text-xs text-dimmed tabular-nums"
+                        >
+                          +{{ c.row.participants.length - 3 }}
+                        </span>
+                      </div>
+                      <UIcon
+                        v-if="c.row.attachmentFiles.length"
+                        name="i-lucide-paperclip"
+                        class="size-4 shrink-0 text-dimmed"
+                        :title="c.row.attachmentsLabel"
+                      />
+                    </div>
+                  </div>
+
+                  <div
+                    v-else
+                    :class="[
+                      'rounded-lg border border-default bg-default p-3 shadow-sm',
+                      accentCardTopBorder(c.group.accent),
+                      isScheduleGeneralView && accentSurfaceClass(c.group.accent)
+                    ]"
+                  >
+                    <div class="mb-2 flex items-center gap-2">
+                      <UIcon name="i-lucide-eye-off" class="size-4 shrink-0 text-dimmed" aria-hidden="true" />
+                      <span class="tabular-nums text-xs text-dimmed">{{ c.row.time }}</span>
+                      <span class="text-xs text-dimmed">Скрытое</span>
+                      <div class="ms-auto shrink-0" @click.stop>
+                        <UDropdownMenu
+                          v-if="!isScheduleGeneralView"
+                          :items="rowContextMenuItems(c.block, c.group, c.row)"
+                          :content="{ align: 'end', collisionPadding: 12 }"
+                        >
+                          <UButton
+                            color="neutral"
+                            variant="ghost"
+                            square
+                            size="xs"
+                            icon="i-lucide-ellipsis"
+                            aria-label="Действия с мероприятием"
+                          />
+                        </UDropdownMenu>
+                      </div>
+                    </div>
+                    <p class="pointer-events-none select-none text-sm text-muted blur-xs">
+                      {{ c.row.topic }}
+                    </p>
+                    <p class="mt-2 text-xs text-dimmed">
+                      Просмотр недоступен
+                    </p>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div
