@@ -1,13 +1,27 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
+import { CalendarDate } from '@internationalized/date'
+import { computed, reactive, ref, watch } from 'vue'
 import {
-  parseDateFromScheduleBlockTitle,
+  findScheduleBlockIdByDate,
+  formatAttachmentsLabel,
+  formatScheduleCreatedAtNow,
   formatSchedulePlace,
+  ensureScheduleRowDetailMeta,
+  getScheduleRowCreatedAt,
+  previewScheduleFile,
+  scheduleAttachmentsFromFiles,
+  scheduleFileDisplaySize,
+  scheduleFilesFromAttachments,
+  parseDateFromScheduleBlockTitle,
+  parseScheduleDateString,
+  scheduleParticipantKey,
   type ScheduleDateBlock,
   type ScheduleParticipant,
   type ScheduleRow,
   type ScheduleUserGroup
 } from '../../data/schedule-mock'
+import ScheduleAttachmentList from './ScheduleAttachmentList.vue'
+import ScheduleDatePicker from './ScheduleDatePicker.vue'
 import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue'
 
 const open = defineModel<boolean>('open', { default: false })
@@ -20,29 +34,68 @@ const props = defineProps<{
   } | null
   /** Режим редактирования: поля активны, внизу «Отмена» / «Сохранить». */
   editable?: boolean
+  /** Создание нового мероприятия (только персональный график заместителя). */
+  isCreate?: boolean
+  /** Блоки дней графика для выбора даты при создании. */
+  createDayBlocks?: ScheduleDateBlock[]
+  /** Список участников для выбора в форме. */
+  availableParticipants?: ScheduleParticipant[]
 }>()
+
+const createDayBlockId = defineModel<string>('createDayBlockId')
+
+const toast = useToast()
 
 const emit = defineEmits<{
   saved: []
 }>()
 
-const editable = computed(() => Boolean(props.editable))
+const editable = computed(() => Boolean(props.editable || props.isCreate))
+const isCreate = computed(() => Boolean(props.isCreate))
 
 const d = computed(() => props.selection?.row.detail)
-const blockDate = computed(() =>
-  props.selection ? parseDateFromScheduleBlockTitle(props.selection.block.title) : undefined)
 
 const draft = reactive({
   date: '',
   time: '',
-  sorting: '',
-  completed: false,
   allDay: false,
   hidden: false,
-  placeLabel: '',
-  placeAddress: '',
+  address: '',
   topic: ''
 })
+
+const selectedParticipantKeys = ref<string[]>([])
+const attachmentFiles = ref<File[]>([])
+
+function removeAttachmentAt(index: number) {
+  attachmentFiles.value = attachmentFiles.value.filter((_, i) => i !== index)
+}
+
+const participantsByKey = computed(() => {
+  const map = new Map<string, ScheduleParticipant>()
+  for (const participant of props.availableParticipants ?? [])
+    map.set(scheduleParticipantKey(participant), participant)
+  return map
+})
+
+const participantSelectItems = computed(() =>
+  (props.availableParticipants ?? []).map(participant => ({
+    label: participant.name,
+    value: scheduleParticipantKey(participant),
+    avatar: { src: participant.avatarSrc, alt: participant.name }
+  }))
+)
+
+const selectedParticipants = computed(() =>
+  selectedParticipantKeys.value
+    .map(key => participantsByKey.value.get(key))
+    .filter((p): p is ScheduleParticipant => Boolean(p))
+)
+
+function removeParticipant(participant: ScheduleParticipant) {
+  const key = scheduleParticipantKey(participant)
+  selectedParticipantKeys.value = selectedParticipantKeys.value.filter(k => k !== key)
+}
 
 function syncDraftFromSelection() {
   const s = props.selection
@@ -51,15 +104,16 @@ function syncDraftFromSelection() {
   }
   const r = s.row
   const bd = parseDateFromScheduleBlockTitle(s.block.title)
+  if (bd)
+    ensureScheduleRowDetailMeta(r, bd)
   draft.time = r.time
-  draft.placeLabel = r.placeLabel
-  draft.placeAddress = r.placeAddress
+  draft.address = formatSchedulePlace(r)
   draft.topic = r.topic
   draft.date = r.detail?.date ?? bd ?? ''
-  draft.sorting = r.detail?.sorting ?? (r.detail?.date ?? bd ?? '')
-  draft.completed = r.detail?.completed ?? false
   draft.allDay = r.detail?.allDay ?? false
   draft.hidden = r.hidden ?? false
+  selectedParticipantKeys.value = r.participants.map(scheduleParticipantKey)
+  attachmentFiles.value = scheduleFilesFromAttachments(r.attachmentFiles)
 }
 
 watch(
@@ -71,9 +125,55 @@ watch(
   { immediate: true }
 )
 
-const headerDateTime = computed(
-  () => d.value?.headerDateTime ?? [blockDate.value, props.selection?.row.time].filter(Boolean).join(', ')
+const createAvailableDates = computed(() =>
+  (props.createDayBlocks ?? [])
+    .map(b => parseDateFromScheduleBlockTitle(b.title))
+    .filter((d): d is string => Boolean(d))
 )
+
+const createCalendarRange = computed((): {
+  min: CalendarDate | undefined
+  max: CalendarDate | undefined
+} => {
+  if (!isCreate.value)
+    return { min: undefined, max: undefined }
+  const parsed = createAvailableDates.value
+    .map(parseScheduleDateString)
+    .filter((d): d is CalendarDate => Boolean(d))
+    .sort((a, b) => a.compare(b))
+  if (!parsed.length)
+    return { min: undefined, max: undefined }
+  return { min: parsed[0], max: parsed[parsed.length - 1] }
+})
+
+watch(
+  () => draft.allDay,
+  (allDay) => {
+    if (allDay)
+      draft.time = ''
+  }
+)
+
+watch(
+  () => draft.date,
+  (dateStr) => {
+    if (!isCreate.value || !dateStr || !props.createDayBlocks?.length)
+      return
+    const blockId = findScheduleBlockIdByDate(props.createDayBlocks, dateStr)
+    if (blockId && createDayBlockId.value !== blockId)
+      createDayBlockId.value = blockId
+  }
+)
+
+/** Дата создания записи (не дата проведения мероприятия). */
+const headerCreatedAt = computed(() => {
+  if (isCreate.value)
+    return formatScheduleCreatedAtNow(draft.allDay)
+  const s = props.selection
+  if (!s)
+    return ''
+  return getScheduleRowCreatedAt(s.row)
+})
 const organizerParticipant = computed((): ScheduleParticipant | null => {
   if (!props.selection)
     return null
@@ -87,20 +187,35 @@ function applyDraftToRow() {
   if (!s)
     return
   const r = s.row
-  r.time = draft.time
-  r.placeLabel = draft.placeLabel
-  r.placeAddress = draft.placeAddress
+  r.time = draft.allDay ? '' : draft.time
+  r.placeLabel = ''
+  r.placeAddress = draft.address.trim()
   r.topic = draft.topic
+  r.participants = [...selectedParticipants.value]
   if (!r.detail)
     r.detail = {}
   r.detail.date = draft.date
-  r.detail.sorting = draft.sorting
-  r.detail.completed = draft.completed
   r.detail.allDay = draft.allDay
+  if (!r.detail.createdAt) {
+    const eventDate = draft.date || parseDateFromScheduleBlockTitle(s.block.title) || ''
+    if (isCreate.value)
+      r.detail.createdAt = formatScheduleCreatedAtNow(draft.allDay)
+    else
+      ensureScheduleRowDetailMeta(r, eventDate)
+  }
   r.hidden = draft.hidden
+  r.attachmentFiles = scheduleAttachmentsFromFiles(attachmentFiles.value)
+  r.attachmentsLabel = formatAttachmentsLabel(r.attachmentFiles.length)
 }
 
 function onSave() {
+  if (!draft.topic.trim()) {
+    toast.add({
+      title: 'Укажите тему мероприятия',
+      color: 'warning'
+    })
+    return
+  }
   applyDraftToRow()
   emit('saved')
   open.value = false
@@ -127,12 +242,18 @@ function onCancelEdit() {
       <div class="flex w-full items-start justify-between gap-4">
         <div class="flex min-w-0 flex-1 flex-col gap-1">
           <p class="text-base font-semibold text-highlighted" role="heading" :aria-level="2">
-            {{ editable ? 'Редактирование мероприятия' : 'Мероприятие' }}
+            {{
+              isCreate
+                ? 'Новое мероприятие'
+                : editable
+                  ? 'Редактирование мероприятия'
+                  : 'Мероприятие'
+            }}
           </p>
           <div class="flex flex-wrap items-center gap-2 text-sm text-muted">
-            <span>{{ headerDateTime }}</span>
+            <span v-if="headerCreatedAt">{{ headerCreatedAt }}</span>
             <ScheduleParticipantPopoverChip
-              v-if="organizerParticipant"
+              v-if="organizerParticipant && !isCreate"
               variant="header"
               is-creator
               :participant="organizerParticipant"
@@ -154,15 +275,16 @@ function onCancelEdit() {
     <template v-if="selection" #body>
       <div class="flex flex-col gap-3">
         <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:gap-3">
-          <UFormField label="Дата" class="w-full shrink-0 sm:w-64">
-            <UInput
+          <UFormField :label="isCreate ? 'День' : 'Дата'" class="w-full shrink-0 sm:w-64">
+            <ScheduleDatePicker
               v-model="draft.date"
               :disabled="!editable"
-              variant="outline"
-              class="w-full"
+              :available-dates="isCreate ? createAvailableDates : undefined"
+              :min-value="isCreate ? createCalendarRange.min : undefined"
+              :max-value="isCreate ? createCalendarRange.max : undefined"
             />
           </UFormField>
-          <UFormField label="Время" class="min-w-0 flex-1">
+          <UFormField v-if="!draft.allDay" label="Время" class="min-w-0 flex-1">
             <UInput
               v-model="draft.time"
               :disabled="!editable"
@@ -172,45 +294,23 @@ function onCancelEdit() {
           </UFormField>
         </div>
 
-        <UFormField label="Сортировка">
-          <UInput
-            v-model="draft.sorting"
+        <div class="flex flex-col gap-3">
+          <USwitch
+            v-model="draft.allDay"
             :disabled="!editable"
-            variant="outline"
-            class="w-full"
+            label="Весь день"
           />
-        </UFormField>
-
-        <div class="flex flex-wrap items-start gap-6">
-          <UCheckbox v-model="draft.completed" :disabled="!editable" label="Выполнено" />
-          <UCheckbox v-model="draft.allDay" :disabled="!editable" label="Весь день" />
-          <UCheckbox
+          <USwitch
             v-model="draft.hidden"
             :disabled="!editable"
             label="Скрыть"
           />
         </div>
 
-        <template v-if="editable">
-          <UFormField label="Населённый пункт">
-            <UInput
-              v-model="draft.placeLabel"
-              variant="outline"
-              class="w-full"
-            />
-          </UFormField>
-          <UFormField label="Адрес">
-            <UInput
-              v-model="draft.placeAddress"
-              variant="outline"
-              class="w-full"
-            />
-          </UFormField>
-        </template>
-        <UFormField v-else label="Место">
+        <UFormField label="Адрес">
           <UInput
-            :model-value="formatSchedulePlace(selection.row)"
-            disabled
+            v-model="draft.address"
+            :disabled="!editable"
             variant="outline"
             class="w-full"
           />
@@ -228,39 +328,111 @@ function onCancelEdit() {
         </UFormField>
 
         <UFormField label="Участники">
+          <USelectMenu
+            v-if="editable"
+            v-model="selectedParticipantKeys"
+            :items="participantSelectItems"
+            value-key="value"
+            multiple
+            placeholder="Выберите участников"
+            icon="i-lucide-users"
+            :search-input="{ placeholder: 'Найти участника…' }"
+            class="w-full"
+            :ui="{ trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200' }"
+          />
           <div
             class="flex w-full flex-wrap gap-2 rounded-md border border-default px-3 py-2"
+            :class="{ 'mt-2': editable }"
           >
             <ScheduleParticipantPopoverChip
-              v-for="(participant, pi) in selection.row.participants"
-              :key="pi"
+              v-for="participant in editable ? selectedParticipants : selection.row.participants"
+              :key="scheduleParticipantKey(participant)"
               variant="field"
               :participant="participant"
+              :removable="editable"
+              @remove="removeParticipant(participant)"
             />
+            <span
+              v-if="(editable ? selectedParticipants : selection.row.participants).length === 0"
+              class="text-sm text-muted"
+            >
+              Участников пока нет
+            </span>
           </div>
         </UFormField>
 
         <UFormField label="Приложения">
-          <div class="flex flex-col gap-2">
-            <div
-              v-for="(file, fi) in selection.row.attachmentFiles"
-              :key="fi"
-              class="flex w-full items-center gap-1.5 rounded-md border border-default px-2.5 py-1.5"
-            >
-              <div class="flex shrink-0 items-center rounded-full bg-elevated p-2">
-                <UIcon name="i-lucide-file" class="size-4 text-muted" />
+          <ScheduleAttachmentList
+            v-if="!editable"
+            :files="selection.row.attachmentFiles"
+          />
+          <UFileUpload
+            v-else
+            v-model="attachmentFiles"
+            multiple
+            layout="list"
+            position="outside"
+            :interactive="false"
+            :file-delete="false"
+            :file-image="false"
+            icon="i-lucide-paperclip"
+            label="Перетащите файлы сюда"
+            description="Документы любого формата"
+            class="w-full min-h-32"
+          >
+            <template #actions="{ open: openFileDialog }">
+              <UButton
+                label="Выбрать файлы"
+                icon="i-lucide-upload"
+                color="neutral"
+                variant="outline"
+                @click="openFileDialog()"
+              />
+            </template>
+
+            <template #file-size="{ file }">
+              {{ scheduleFileDisplaySize(file) }}
+            </template>
+
+            <template #file-trailing="{ file, index }">
+              <div class="flex items-center gap-0.5">
+                <UButton
+                  color="neutral"
+                  variant="link"
+                  size="xs"
+                  icon="i-lucide-eye"
+                  class="px-1"
+                  aria-label="Просмотреть файл"
+                  @click.stop.prevent="previewScheduleFile(file)"
+                />
+                <UButton
+                  color="neutral"
+                  variant="link"
+                  size="xs"
+                  icon="i-lucide-x"
+                  class="px-1"
+                  aria-label="Удалить файл"
+                  @click.stop.prevent="removeAttachmentAt(index)"
+                />
               </div>
-              <div class="min-w-0 flex flex-col text-sm leading-5">
-                <span class="truncate text-default">{{ file.name }}</span>
-                <span class="text-muted">{{ file.size }}</span>
-              </div>
-            </div>
-          </div>
+            </template>
+
+            <template #files-bottom="{ removeFile, files }">
+              <UButton
+                v-if="files?.length"
+                label="Удалить все файлы"
+                color="neutral"
+                variant="outline"
+                class="mt-2 w-full justify-center"
+                @click="removeFile()"
+              />
+            </template>
+          </UFileUpload>
         </UFormField>
       </div>
     </template>
 
-    <template v-if="selection && editable" #footer>
+    <template v-if="selection && (editable || isCreate)" #footer>
       <div class="flex w-full gap-2 ">
         <UButton
           label="Отмена"
@@ -271,7 +443,7 @@ function onCancelEdit() {
           @click="onCancelEdit"
         />
         <UButton
-          label="Сохранить"
+          :label="isCreate ? 'Создать' : 'Сохранить'"
           color="primary"
           class="w-full justify-center"
           size="lg"

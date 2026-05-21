@@ -2,6 +2,7 @@
 import { ref, watchEffect, nextTick } from 'vue'
 import { useHead } from '@unhead/vue'
 import { useColorMode } from '@vueuse/core'
+import { ru } from '@nuxt/ui/locale'
 
 const colorMode = useColorMode()
 
@@ -19,6 +20,7 @@ watchEffect(async () => {
 })
 
 useHead(() => ({
+  htmlAttrs: { lang: 'ru' },
   meta: [
     { name: 'theme-color', content: themeColor.value }
   ]
@@ -27,7 +29,7 @@ useHead(() => ({
 
 <template>
   <Suspense>
-    <UApp class="min-h-dvh bg-default">
+    <UApp :locale="ru" class="min-h-dvh bg-default">
       <RouterView />
     </UApp>
   </Suspense>
