@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useStorage } from '@vueuse/core'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { schedulePathForSlug, scheduleTitleOptions } from '../data/schedule-mock'
+import { useAuth } from '../composables/useAuth'
+import { isApiEnabled } from '../api/client'
 
 const toast = useToast()
+const { canViewLogs } = useAuth()
 
 const open = ref(false)
 
@@ -19,7 +22,18 @@ const scheduleNavChildren = scheduleTitleOptions.map(opt => ({
   }
 })) satisfies NavigationMenuItem[]
 
-const links = [[{
+const adminLinks = computed<NavigationMenuItem[]>(() => {
+  if (!isApiEnabled() || !canViewLogs.value)
+    return []
+  return [{
+    label: 'Логи',
+    icon: 'i-lucide-scroll-text',
+    to: '/logs',
+    onSelect: () => { open.value = false }
+  }]
+})
+
+const links = computed(() => [[{
   slot: 'schedule-nav',
   label: 'График заместителей',
   icon: 'i-lucide-calendar-range',
@@ -27,7 +41,7 @@ const links = [[{
   defaultOpen: true,
   type: 'trigger',
   children: scheduleNavChildren
-}], [{
+}, ...adminLinks.value], [{
   label: 'Обратная связь',
   icon: 'i-lucide-message-circle',
   to: 'https://forms.yandex.ru/u/6a05984a902902136ca191e3',
@@ -35,7 +49,7 @@ const links = [[{
   onSelect: () => {
     open.value = false
   }
-}]] satisfies NavigationMenuItem[][]
+}]] satisfies NavigationMenuItem[][])
 
 const cookie = useStorage('cookie-consent', 'pending')
 if (cookie.value !== 'accepted') {
@@ -76,7 +90,7 @@ if (cookie.value !== 'accepted') {
       <template #default="{ collapsed }">
         <UNavigationMenu
           :collapsed="collapsed"
-          :items="links[0]"
+          :items="links[0]!"
           orientation="vertical"
           tooltip
           :popover="{ content: { side: 'right', align: 'start', alignOffset: 2 } }"
@@ -143,9 +157,9 @@ if (cookie.value !== 'accepted') {
         </UNavigationMenu>
 
         <UNavigationMenu
-          v-if="links[1].length"
+          v-if="links[1]!.length"
           :collapsed="collapsed"
-          :items="links[1]"
+          :items="links[1]!"
           orientation="vertical"
           tooltip
           class="mt-auto"

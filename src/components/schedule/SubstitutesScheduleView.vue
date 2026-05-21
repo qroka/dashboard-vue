@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useHead } from '@unhead/vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { DropdownMenuItem } from '@nuxt/ui'
@@ -32,6 +32,7 @@ import {
 } from '../../data/schedule-mock'
 import ScheduleEventSlideover from './ScheduleEventSlideover.vue'
 import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue'
+import { fetchScheduleBlocks, isApiEnabled } from '../../composables/useScheduleApi'
 
 /** Карточка на доске: столбец = день (`ScheduleDateBlock`). */
 interface ScheduleBoardCard {
@@ -53,6 +54,35 @@ const toast = useToast()
 const view = ref<'list' | 'board'>('list')
 
 const scheduleBlocks = ref<ScheduleDateBlock[]>(createScheduleDateBlocks())
+const scheduleLoading = ref(false)
+
+async function reloadScheduleFromApi() {
+  if (!isApiEnabled())
+    return
+  scheduleLoading.value = true
+  try {
+    scheduleBlocks.value = await fetchScheduleBlocks(
+      scope.value,
+      searchQuery.value,
+      selectedParticipantKeys.value
+    )
+  }
+  catch (e) {
+    console.error(e)
+    toast.add({ title: 'Не удалось загрузить график', color: 'error' })
+  }
+  finally {
+    scheduleLoading.value = false
+  }
+}
+
+onMounted(() => {
+  void reloadScheduleFromApi()
+})
+
+watch([scope, searchQuery, selectedParticipantKeys], () => {
+  void reloadScheduleFromApi()
+})
 
 const scope = computed<ScheduleTitleValue>(() => parseScheduleSlugFromPath(route.path))
 

@@ -31,6 +31,8 @@ export interface ScheduleRowDetail {
 }
 
 export interface ScheduleRow {
+  /** Server event id when loaded from API */
+  id?: string
   time: string
   placeLabel: string
   placeAddress: string
