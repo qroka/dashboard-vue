@@ -59,20 +59,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/login': RouteRecordInfo<
-      '/login',
-      '/login',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/logs/': RouteRecordInfo<
-      '/logs/',
-      '/logs',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/schedule/': RouteRecordInfo<
       '/schedule/',
       '/schedule',
@@ -159,18 +145,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/inbox.vue': {
       routes:
         | '/inbox'
-      views:
-        | never
-    }
-    'src/pages/login.vue': {
-      routes:
-        | '/login'
-      views:
-        | never
-    }
-    'src/pages/logs/index.vue': {
-      routes:
-        | '/logs/'
       views:
         | never
     }

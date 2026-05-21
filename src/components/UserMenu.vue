@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useColorMode } from '@vueuse/core'
-import { useRouter } from 'vue-router'
-import { useAuth } from '../composables/useAuth'
-import { isApiEnabled } from '../api/client'
 
 defineProps<{
   collapsed?: boolean
@@ -16,30 +13,11 @@ const appConfig = useAppConfig()
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
 
-const router = useRouter()
-const { user: authUser, fetchMe, logout } = useAuth()
-
-onMounted(() => {
-  if (isApiEnabled())
-    void fetchMe()
-})
-
-const user = computed(() => {
-  if (authUser.value) {
-    return {
-      name: authUser.value.u_fio ?? authUser.value.u_login,
-      avatar: {
-        src: 'https://github.com/benjamincanac.png',
-        alt: authUser.value.u_fio ?? authUser.value.u_login
-      }
-    }
-  }
-  return {
-    name: 'Администратор',
-    avatar: {
-      src: 'https://github.com/benjamincanac.png',
-      alt: 'Администратор'
-    }
+const user = ref({
+  name: 'Администратор',
+  avatar: {
+    src: 'https://github.com/benjamincanac.png',
+    alt: 'Администратор'
   }
 })
 
@@ -116,13 +94,7 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
   }]
 }], [{
   label: 'Выход',
-  icon: 'i-lucide-log-out',
-  onSelect() {
-    if (isApiEnabled()) {
-      logout()
-      void router.push('/login')
-    }
-  }
+  icon: 'i-lucide-log-out'
 }]]))</script>
 
 <template>
