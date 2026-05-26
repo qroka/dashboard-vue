@@ -38,9 +38,6 @@ async function onSubmit() {
         <h1 class="text-lg font-semibold text-highlighted">
           Вход в CRM
         </h1>
-        <p class="mt-1 text-sm text-muted">
-          Логин и пароль — как в CRM. Локальная учётка admin — только если настроен SEED_USER_* в server/.env.
-        </p>
       </template>
 
       <form class="flex flex-col gap-4" @submit.prevent="onSubmit">
@@ -57,6 +54,7 @@ async function onSubmit() {
             v-model="password"
             type="password"
             autocomplete="current-password"
+            placeholder="Пароль"
             class="w-full"
           />
         </UFormField>
