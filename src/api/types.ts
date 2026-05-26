@@ -52,7 +52,7 @@ export interface ApiEvent {
   attachments: ApiEventAttachment[]
   participants?: ApiCrmParticipant[]
   organizer?: ApiCrmParticipant | null
-  /** Исполнитель-участник: в графике только время, без темы/места. */
+  /** Исполнитель: скрытое мероприятие — в графике только время. */
   viewRestricted?: boolean
 }
 
