@@ -51,8 +51,22 @@ const MOCK_PARTICIPANTS: CrmParticipant[] = [
   },
 ]
 
+export type ParticipantsDataSource = 'mock' | 'mysql' | 'http'
+
+export function participantsDataSource(env: Env): ParticipantsDataSource {
+  if (env.CRM_MOCK)
+    return 'mock'
+  if (participantsMysqlEnabled(env))
+    return 'mysql'
+  return 'http'
+}
+
 export class CrmParticipantsService {
   constructor(private readonly env: Env) {}
+
+  dataSource(): ParticipantsDataSource {
+    return participantsDataSource(this.env)
+  }
 
   async list(search?: string): Promise<CrmParticipant[]> {
     if (this.env.CRM_MOCK)

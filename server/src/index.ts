@@ -1,12 +1,10 @@
-import { config as loadDotenv } from 'dotenv'
-import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadProjectDotenv } from './config/load-dotenv.js'
 import { loadEnv } from './config/env.js'
 import { buildApp } from './app.js'
 import { logActivity } from './services/activity-log.js'
 
-const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-loadDotenv({ path: resolve(rootDir, '.env') })
+const loadedEnvFiles = loadProjectDotenv(fileURLToPath(import.meta.url))
 
 async function main() {
   const env = loadEnv()
@@ -22,6 +20,10 @@ async function main() {
     }, app.log)
     app.log.info(`CRM API listening on http://${env.HOST}:${env.PORT}`)
     app.log.info(`SQLite: ${env.SQLITE_PATH}`)
+    if (loadedEnvFiles.length)
+      app.log.info(`Env files: ${loadedEnvFiles.join(', ')}`)
+    else
+      app.log.warn('No .env file loaded (using process.env / defaults)')
     app.log.info(`CRM participants mock: ${env.CRM_MOCK}`)
   } catch (error) {
     app.log.error(error)

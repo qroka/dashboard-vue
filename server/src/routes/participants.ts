@@ -28,11 +28,11 @@ export const participantsRoutes: FastifyPluginAsync = async app => {
             .map(s => Number(s.trim()))
             .filter(n => Number.isInteger(n) && n > 0)
           const participants = await crm.getByIds(ids)
-          return { success: true, participants, source: app.config.env.CRM_MOCK ? 'mock' : 'crm' }
+          return { success: true, participants, source: crm.dataSource() }
         }
 
         const participants = await crm.list(parsed.data.search)
-        return { success: true, participants, source: app.config.env.CRM_MOCK ? 'mock' : 'crm' }
+        return { success: true, participants, source: crm.dataSource() }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'CRM unavailable'
         const actor = jwtActor(request)
@@ -65,7 +65,7 @@ export const participantsRoutes: FastifyPluginAsync = async app => {
         if (!participant) {
           return reply.status(404).send({ success: false, error: 'Participant not found' })
         }
-        return { success: true, participant, source: app.config.env.CRM_MOCK ? 'mock' : 'crm' }
+        return { success: true, participant, source: crm.dataSource() }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'CRM unavailable'
         const actor = jwtActor(request)

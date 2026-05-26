@@ -62,8 +62,12 @@ pnpm install
 
 ```bash
 cp .env.example server/.env
+# Либо скопируйте html/.env → server/.env (production systemd читает server/.env)
 nano server/.env
 ```
+
+API загружает **оба** файла: сначала `html/.env`, затем `server/.env` (перекрывает).  
+При запуске `node server/dist/index.js` раньше подхватывался только `server/.env` — из‑за этого `CRM_MOCK=false` в `html/.env` не действовал, и в списке были 4 демо-участника (Константинов, Иванова, …).
 
 Пример для production:
 
@@ -245,6 +249,7 @@ sudo systemctl restart grafic-api
 | `pnpm install` падает на better-sqlite3 | `sudo apt install build-essential python3` |
 | `/api/` — 502 | `systemctl start grafic-api`, проверить порт 3001 |
 | Участники пустые / 502 | `crm_participants.php` на CRM, `CRM_SYNC_SECRET`, `curl` с 4.21 |
+| В списке только 4 демо (Константинов, Иванова…) | `CRM_MOCK=true` или не загружен `.env` — в `server/.env` задать `CRM_MOCK=false`, перезапуск API; в ответе `GET /api/participants` поле `source` должно быть `http` или `mysql`, не `mock` |
 | Белая страница | `pnpm build`, проверить `dist/index.html` и nginx `root` |
 | Не пускает в график | Проверить `JWT_SECRET`, логин seed, `journalctl -u grafic-api` |
 | `Invalid environment (production)` в journal | В `server/.env`: свой `SEED_USER_PASSWORD` (не `admin`), `JWT_SECRET` ≥32 символа (не dev-only-…) |
