@@ -25,7 +25,10 @@ import {
   filterEventsForProfile,
 } from '../services/event-permissions.js'
 import type { UserAccessProfile } from '../types/auth.js'
-import { applyEventVisibilityForProfile } from '../utils/event-visibility.js'
+import {
+  applyEventVisibilityForProfile,
+  type EnrichedEvent,
+} from '../utils/event-visibility.js'
 
 const createEventSchema = z.object({
   substituteSlug: z.string().min(1),
@@ -64,12 +67,14 @@ function collectExternalIds(events: EventRecord[]): number[] {
 function enrichWithMap(
   event: EventRecord,
   byId: Map<number, CrmParticipant>,
-) {
+): EnrichedEvent {
+  const participants = event.participantIds
+    .map(id => byId.get(id))
+    .filter((p): p is CrmParticipant => p != null)
+
   return {
     ...event,
-    participants: event.participantIds
-      .map(id => byId.get(id))
-      .filter(Boolean),
+    participants,
     organizer: event.organizerExternalId
       ? byId.get(event.organizerExternalId) ?? null
       : null,
