@@ -6,6 +6,7 @@ export interface ApiUser {
   name: string
   email: string | null
   role: ApiUserRole
+  roleLabel?: string
   externalUserId: number | null
   substituteSlug: string | null
   editableSubstituteSlugs: string[]

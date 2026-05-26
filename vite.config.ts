@@ -6,6 +6,7 @@ import ui from '@nuxt/ui/vite'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: process.env.VITE_BASE_PATH || '/',
   server: {
     port: 5173,
     proxy: {

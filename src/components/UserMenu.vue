@@ -17,13 +17,17 @@ const { user, logout } = useAuth()
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
 
-const menuUser = computed(() => ({
-  name: user.value?.name ?? 'Пользователь',
-  avatar: {
-    src: undefined as string | undefined,
-    alt: user.value?.name ?? 'Пользователь',
-  },
-}))
+const menuUser = computed(() => {
+  const name = user.value?.name ?? 'Пользователь'
+  const roleHint = user.value?.roleLabel
+  return {
+    name: roleHint ? `${name} · ${roleHint}` : name,
+    avatar: {
+      src: undefined as string | undefined,
+      alt: name,
+    },
+  }
+})
 
 const items = computed<DropdownMenuItem[][]>(() => ([[{
   label: 'Цвета',

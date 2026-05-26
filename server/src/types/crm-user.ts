@@ -13,7 +13,8 @@ export interface CrmUserRecord {
   position: string
   info: string
   notes: string
-  schedulePermission: boolean
+  /** Роль в графике заместителей (user.u_prem9). */
+  scheduleRole: number
   isDeputy: boolean
   deputyId: number
   permissions: CrmUserPermissions
@@ -28,6 +29,7 @@ export interface CrmUsersMeta {
   accessLevels: { value: number, label: string }[]
   activeLevels: { value: number, label: string }[]
   permissionModules: { key: string, label: string }[]
+  scheduleRoleLevels: { value: number, label: string }[]
 }
 
 export interface UpdateCrmUserInput {
@@ -41,7 +43,7 @@ export interface UpdateCrmUserInput {
   position?: string
   info?: string
   notes?: string
-  schedulePermission?: boolean
+  scheduleRole?: number
   isDeputy?: boolean
   deputyId?: number
   permissions?: Partial<CrmUserPermissions>
@@ -58,7 +60,7 @@ export interface CreateCrmUserInput {
   position?: string
   info?: string
   notes?: string
-  schedulePermission?: boolean
+  scheduleRole?: number
   isDeputy?: boolean
   deputyId?: number
   permissions?: Partial<CrmUserPermissions>

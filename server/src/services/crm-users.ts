@@ -7,6 +7,8 @@ import {
   permissionsFromRow,
   shouldMaskPassword,
 } from '../constants/crm-user-fields.js'
+import { CRM_SCHEDULE_ROLE_LEVELS } from '../constants/crm-schedule-access.js'
+import { SCHEDULE_DEPUTY_OPTIONS } from '../constants/crm-login-slugs.js'
 import type {
   CreateCrmUserInput,
   CrmUserDeputyOption,
@@ -105,7 +107,7 @@ function mapRow(row: UserRow, maskPassword = true): CrmUserRecord {
     position,
     info,
     notes: row.u_notes ?? '',
-    schedulePermission: Number(row.u_prem9 ?? 0) === 1,
+    scheduleRole: Number(row.u_prem9 ?? 0),
     isDeputy: row.u_is_zam === 1,
     deputyId: row.u_zam_id || 0,
     permissions,
@@ -133,8 +135,8 @@ function applyInputToRecord(user: CrmUserRecord, input: UpdateCrmUserInput): voi
     user.info = input.info
   if (input.notes !== undefined)
     user.notes = input.notes
-  if (input.schedulePermission !== undefined)
-    user.schedulePermission = input.schedulePermission
+  if (input.scheduleRole !== undefined)
+    user.scheduleRole = input.scheduleRole
   if (input.isDeputy !== undefined)
     user.isDeputy = input.isDeputy
   if (input.deputyId !== undefined)
@@ -162,7 +164,7 @@ function buildUpdateSets(input: UpdateCrmUserInput): { sets: string[], params: u
     ['position', 'u_position', v => v],
     ['info', 'u_info', v => v],
     ['notes', 'u_notes', v => v],
-    ['schedulePermission', 'u_prem9', v => (v ? 1 : 0)],
+    ['scheduleRole', 'u_prem9', v => Number(v) || 0],
     ['isDeputy', 'u_is_zam', v => (v ? 1 : 0)],
     ['deputyId', 'u_zam_id', v => v],
   ]
@@ -196,15 +198,12 @@ export class CrmUsersService {
       accessLevels: CRM_ACCESS_LEVELS.map(l => ({ value: l.value, label: l.label })),
       activeLevels: CRM_ACTIVE_LEVELS.map(l => ({ value: l.value, label: l.label })),
       permissionModules: CRM_PERMISSION_MODULES.map(m => ({ key: m.key, label: m.label })),
+      scheduleRoleLevels: CRM_SCHEDULE_ROLE_LEVELS.map(l => ({ value: l.value, label: l.label })),
     }
   }
 
   async listDeputies(): Promise<CrmUserDeputyOption[]> {
-    const users = await this.list()
-    return users
-      .filter(u => u.isDeputy)
-      .map(u => ({ id: u.id, name: u.name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+    return SCHEDULE_DEPUTY_OPTIONS.map(d => ({ id: d.id, name: d.name }))
   }
 
   async list(search?: string): Promise<CrmUserRecord[]> {
@@ -296,7 +295,7 @@ export class CrmUsersService {
         input.office ?? '',
         input.position ?? input.info ?? '',
         ...CRM_PERMISSION_MODULES.map(m => permissions[m.key]),
-        input.schedulePermission ? 1 : 0,
+        input.scheduleRole ?? 0,
         input.info ?? '',
         input.notes ?? '',
         input.isDeputy ? 1 : 0,
@@ -349,7 +348,7 @@ export class CrmUsersService {
       position: input.position ?? input.info ?? '',
       info: input.info ?? '',
       notes: input.notes ?? '',
-      schedulePermission: Boolean(input.schedulePermission),
+      scheduleRole: Number(input.scheduleRole ?? 0),
       isDeputy: Boolean(input.isDeputy),
       deputyId: input.deputyId ?? 0,
       permissions,

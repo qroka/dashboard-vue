@@ -5,14 +5,37 @@ import {
   verifyCredentials,
   findUserAccessById,
   toPublicUserProfile,
+  upsertUserFromCrm,
 } from '../repositories/users.js'
 import type { AuthUserPayload, LocalUser } from '../types/auth.js'
 import { getRequestIp, logActivity } from '../services/activity-log.js'
+import {
+  fetchCrmLookupUser,
+  mapCrmUserToLocalFields,
+  verifyCrmSsoToken,
+} from '../services/crm-auth.js'
 
 const loginSchema = z.object({
   login: z.string().min(1),
   password: z.string().min(1),
 })
+
+const crmSsoSchema = z.object({
+  token: z.string().min(10),
+})
+
+function scheduleSsoSecret(env: { SCHEDULE_SSO_SECRET?: string, CRM_SYNC_SECRET: string }): string {
+  return env.SCHEDULE_SSO_SECRET?.trim() || env.CRM_SYNC_SECRET
+}
+
+async function signInLocalUser(
+  user: LocalUser,
+  reply: { jwtSign: (payload: AuthUserPayload) => Promise<string> },
+) {
+  const profile = findUserAccessById(user.id)!
+  const token = await reply.jwtSign(toJwtPayload(user))
+  return { token, user: toPublicUserProfile(profile) }
+}
 
 function toJwtPayload(user: LocalUser): AuthUserPayload {
   return {
@@ -62,7 +85,22 @@ export const authRoutes: FastifyPluginAsync = async app => {
     }
 
     const ip = getRequestIp(request)
-    const user = await verifyCredentials(parsed.data.login, parsed.data.password)
+    let user: LocalUser | null = null
+    let viaCrm = false
+
+    // CRM — источник роли (u_prem9); иначе остаётся старая роль в SQLite (например admin).
+    const crmUser = await fetchCrmLookupUser(
+      app.config.env,
+      parsed.data.login,
+      parsed.data.password,
+    )
+    if (crmUser) {
+      user = upsertUserFromCrm(mapCrmUserToLocalFields(crmUser))
+      viaCrm = true
+    } else {
+      user = await verifyCredentials(parsed.data.login, parsed.data.password)
+    }
+
     if (!user) {
       logActivity(app.config.env, {
         level: 'warning',
@@ -85,8 +123,8 @@ export const authRoutes: FastifyPluginAsync = async app => {
     logActivity(app.config.env, {
       level: 'success',
       category: 'auth',
-      action: 'auth.login',
-      message: 'Успешный вход в CRM',
+      action: viaCrm ? 'auth.login_crm' : 'auth.login',
+      message: viaCrm ? 'Вход через CRM (login)' : 'Вход (локальная учётка)',
       userId: user.id,
       userLogin: user.login,
       userName: user.name,
@@ -122,4 +160,75 @@ export const authRoutes: FastifyPluginAsync = async app => {
     { preHandler: [app.authenticate] },
     async () => ({ success: true }),
   )
+
+  /** SSO из CRM: одноразовый токен из schedule.php (#sso=...). */
+  app.post('/auth/crm-sso', async (request, reply) => {
+    const parsed = crmSsoSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ success: false, error: 'Invalid request body' })
+    }
+
+    const payload = verifyCrmSsoToken(
+      parsed.data.token,
+      scheduleSsoSecret(app.config.env),
+    )
+    if (!payload) {
+      return reply.status(401).send({ success: false, error: 'Invalid or expired SSO token' })
+    }
+
+    const fields = mapCrmUserToLocalFields(payload)
+    const user = upsertUserFromCrm(fields)
+    const ip = getRequestIp(request)
+    const { token, user: publicProfile } = await signInLocalUser(user, reply)
+
+    logActivity(app.config.env, {
+      level: 'success',
+      category: 'auth',
+      action: 'auth.crm_sso',
+      message: 'Вход через CRM SSO',
+      userId: user.id,
+      userLogin: user.login,
+      userName: user.name,
+      ipAddress: ip,
+    }, request.log)
+
+    return { success: true, token, user: publicProfile }
+  })
+
+  /** Проверка логина/пароля CRM (crm_lookup.php) и выдача JWT. */
+  app.post('/auth/crm-bridge', {
+    config: {
+      rateLimit: { max: 10, timeWindow: '15 minutes' },
+    },
+  }, async (request, reply) => {
+    const parsed = loginSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({ success: false, error: 'Invalid request body' })
+    }
+
+    const crmUser = await fetchCrmLookupUser(
+      app.config.env,
+      parsed.data.login,
+      parsed.data.password,
+    )
+    if (!crmUser) {
+      return reply.status(401).send({ success: false, error: 'Invalid login or password' })
+    }
+    const fields = mapCrmUserToLocalFields(crmUser)
+    const user = upsertUserFromCrm(fields)
+    const { token, user: publicProfile } = await signInLocalUser(user, reply)
+
+    logActivity(app.config.env, {
+      level: 'success',
+      category: 'auth',
+      action: 'auth.crm_bridge',
+      message: 'Вход через CRM (логин/пароль)',
+      userId: user.id,
+      userLogin: user.login,
+      userName: user.name,
+      ipAddress: getRequestIp(request),
+    }, request.log)
+
+    return { success: true, token, user: publicProfile }
+  })
 }

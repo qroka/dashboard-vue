@@ -10,7 +10,7 @@ const model = defineModel<string>({ default: '' })
 
 const props = defineProps<{
   disabled?: boolean
-  /** ДД.ММ.ГГГГ — только эти даты доступны в календаре (режим создания). */
+  /** ДД.ММ.ГГГГ — если задано, в календаре доступны только эти даты. */
   availableDates?: string[]
   minValue?: CalendarDate
   maxValue?: CalendarDate

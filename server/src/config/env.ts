@@ -32,6 +32,10 @@ const envSchema = z.object({
   CRM_DB_USER: z.string().optional(),
   CRM_DB_PASSWORD: z.string().default(''),
   CRM_DB_NAME: z.string().default('crm'),
+  /** URL crm_lookup.php на сервере CRM (POST login/password). */
+  CRM_LOOKUP_URL: z.string().url().optional(),
+  /** Секрет для SSO-токена из schedule.php (тот же SCHEDULE_SSO_SECRET / CRM_LOOKUP_SECRET в PHP). */
+  SCHEDULE_SSO_SECRET: z.string().optional(),
 })
 
 export type Env = z.infer<typeof envSchema>
@@ -51,12 +55,6 @@ function validateProductionSecrets(data: z.infer<typeof envSchema>): void {
   if (data.SEED_USER_PASSWORD === 'admin') {
     issues.push(
       'SEED_USER_PASSWORD: в production пароль seed не может быть "admin".',
-    )
-  }
-
-  if (data.CRM_SYNC_SECRET === DEFAULT_CRM_SYNC_SECRET) {
-    issues.push(
-      'CRM_SYNC_SECRET: в production задайте отдельный секрет синхронизации CRM (не asu_corporate_sync_key).',
     )
   }
 

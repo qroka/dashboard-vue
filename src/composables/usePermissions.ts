@@ -9,7 +9,7 @@ export function usePermissions() {
   const isReadOnly = computed(() => user.value?.role === 'user')
 
   function canEditSubstituteSlug(slug: string): boolean {
-    if (!user.value)
+    if (!user.value || user.value.role === 'user')
       return false
     return user.value.editableSubstituteSlugs.includes(slug)
   }

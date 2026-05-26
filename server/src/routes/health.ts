@@ -2,6 +2,12 @@ import type { FastifyPluginAsync } from 'fastify'
 import { getDbHealth } from '../services/db.js'
 
 export const healthRoutes: FastifyPluginAsync = async app => {
+  app.get('/', async () => ({
+    ok: true,
+    service: 'crm-api',
+    hint: 'Use /api/health for liveness',
+  }))
+
   app.get('/health', async () => ({
     ok: true,
     service: 'crm-api',

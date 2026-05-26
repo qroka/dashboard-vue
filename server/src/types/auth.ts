@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'manager' | 'moderator' | 'user'
+export type UserRole = 'admin' | 'manager' | 'moderator' | 'assistant' | 'user'
 
 export interface AuthUserPayload {
   sub: string
@@ -34,6 +34,8 @@ export interface PublicUserProfile {
   name: string
   email: string | null
   role: UserRole
+  /** Человекочитаемая роль в графике (не путать с u_prem9 в CRM). */
+  roleLabel: string
   externalUserId: number | null
   substituteSlug: string | null
   editableSubstituteSlugs: string[]

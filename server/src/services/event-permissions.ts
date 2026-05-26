@@ -53,9 +53,10 @@ export function filterEventsForProfile(
 export function roleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
     admin: 'Администратор',
-    manager: 'Руководитель',
+    manager: 'Заместитель',
+    assistant: 'Помощник заместителя',
     moderator: 'Модератор',
-    user: 'Пользователь',
+    user: 'Исполнитель',
   }
   return labels[role]
 }

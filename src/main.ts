@@ -11,16 +11,30 @@ import ui from '@nuxt/ui/vue-plugin'
 import App from './App.vue'
 import { getAuthToken } from './api/client'
 import { useAuth } from './composables/useAuth'
+import { consumeSsoTokenFromUrl, stripSsoFromUrl } from './utils/crm-sso'
 
 const app = createApp(App)
+
+let ssoBootstrap: Promise<void> = Promise.resolve()
+const ssoToken = consumeSsoTokenFromUrl()
+if (ssoToken) {
+  const { loginWithCrmSso } = useAuth()
+  ssoBootstrap = loginWithCrmSso(ssoToken)
+    .then(() => stripSsoFromUrl())
+    .catch(() => {
+      stripSsoFromUrl()
+    })
+}
 
 const head = createHead()
 const router = createRouter({
   routes: setupLayouts(routes as RouteRecordRaw[]),
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
 })
 
 router.beforeEach(async (to) => {
+  await ssoBootstrap
+
   const isPublic = Boolean(to.meta.public)
   const token = getAuthToken()
 
@@ -28,7 +42,7 @@ router.beforeEach(async (to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
 
   if (token && to.path === '/login')
-    return { path: '/schedule' }
+    return { path: '/' }
 
   if (token && !isPublic) {
     const { fetchMe, ready, canViewLogs } = useAuth()
@@ -38,7 +52,10 @@ router.beforeEach(async (to) => {
       return { path: '/login', query: { redirect: to.fullPath } }
 
     if (to.meta.requiresAdmin && !canViewLogs.value)
-      return { path: '/schedule' }
+      return { path: '/' }
+
+    if (to.path === '/customers')
+      return { path: '/' }
   }
 })
 

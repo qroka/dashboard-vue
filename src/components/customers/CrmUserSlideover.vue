@@ -13,6 +13,11 @@ import {
   type CrmPermissionKey,
   type CrmUserPermissions,
 } from '../../constants/crm-user-fields'
+import {
+  CRM_SCHEDULE_ROLE_ASSISTANT,
+  CRM_SCHEDULE_ROLE_DEPUTY,
+  scheduleRoleLabel,
+} from '../../constants/crm-schedule-access'
 
 const t = {
   add: '\u0414\u043e\u0431\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f',
@@ -33,6 +38,7 @@ const t = {
   phone: '\u0422\u0435\u043b\u0435\u0444\u043e\u043d',
   office: '\u041a\u0430\u0431\u0438\u043d\u0435\u0442',
   schedPerm: '\u0413\u0440\u0430\u0444\u0438\u043a \u0437\u0430\u043c\u0435\u0441\u0442\u0438\u0442\u0435\u043b\u0435\u0439',
+  schedAssistant: '\u041f\u043e\u043c\u043e\u0449\u043d\u0438\u043a \u0437\u0430\u043c\u0435\u0441\u0442\u0438\u0442\u0435\u043b\u044f',
   deputy: '\u0417\u0430\u043c\u0435\u0441\u0442\u0438\u0442\u0435\u043b\u044c',
   secretary: '\u0421\u0435\u043a\u0440\u0435\u0442\u0430\u0440\u044c \u0434\u043b\u044f \u0437\u0430\u043c\u0430',
   deputyNone: '\u2014',
@@ -76,7 +82,7 @@ const draft = ref({
   position: '',
   phone: '',
   office: '',
-  schedulePermission: false,
+  scheduleRole: 0,
   isDeputy: false,
   deputyId: 0,
   permissions: emptyCrmPermissions(),
@@ -96,6 +102,18 @@ const accessItems = computed(() =>
   (props.meta?.accessLevels ?? []).map(l => ({ value: l.value, label: l.label })),
 )
 
+const scheduleRoleItems = computed(() =>
+  (props.meta?.scheduleRoleLevels ?? []).map(l => ({ value: l.value, label: l.label })),
+)
+
+const assistantDeputyItems = computed(() =>
+  (props.meta?.deputies ?? []).map(d => ({ value: d.id, label: d.name })),
+)
+
+const showAssistantDeputySelect = computed(
+  () => draft.value.scheduleRole === CRM_SCHEDULE_ROLE_ASSISTANT,
+)
+
 const deputyItems = computed(() => [
   { value: 0, label: t.deputyNone },
   ...(props.meta?.deputies ?? []).map(d => ({ value: d.id, label: d.name })),
@@ -111,8 +129,10 @@ const viewPermissionLines = computed(() => {
     props.meta.permissionModules,
     levelLabel,
   )
-  if (props.user.schedulePermission)
-    lines.push(`${props.meta.scheduleModule.label}: ${t.yes}`)
+  if (props.user.scheduleRole > 0)
+    lines.push(`${props.meta.scheduleModule.label}: ${scheduleRoleLabel(props.user.scheduleRole)}`)
+  if (props.user.scheduleRole === CRM_SCHEDULE_ROLE_ASSISTANT && props.user.deputyId)
+    lines.push(`${t.schedAssistant}: ${deputyName.value}`)
   return lines
 })
 
@@ -134,7 +154,7 @@ function syncDraftFromUser(user: ApiCrmUser) {
     position: user.position,
     phone: user.phone,
     office: user.office,
-    schedulePermission: user.schedulePermission,
+    scheduleRole: user.scheduleRole,
     isDeputy: user.isDeputy,
     deputyId: user.deputyId,
     permissions: { ...user.permissions },
@@ -153,7 +173,7 @@ function resetCreateDraft() {
     position: '',
     phone: '',
     office: '',
-    schedulePermission: false,
+    scheduleRole: 0,
     isDeputy: false,
     deputyId: 0,
     permissions: emptyCrmPermissions(),
@@ -212,9 +232,12 @@ function buildPayload(): UpdateApiCrmUserPayload {
     position: draft.value.position.trim(),
     phone: draft.value.phone.trim(),
     office: draft.value.office.trim(),
-    schedulePermission: draft.value.schedulePermission,
-    isDeputy: draft.value.isDeputy,
-    deputyId: draft.value.isDeputy ? 0 : draft.value.deputyId,
+    scheduleRole: draft.value.scheduleRole,
+    isDeputy: draft.value.scheduleRole === CRM_SCHEDULE_ROLE_DEPUTY
+      || draft.value.isDeputy,
+    deputyId: draft.value.scheduleRole === CRM_SCHEDULE_ROLE_ASSISTANT
+      ? draft.value.deputyId
+      : (draft.value.isDeputy ? 0 : draft.value.deputyId),
     permissions: { ...draft.value.permissions },
   }
   const pass = draft.value.password.trim()
@@ -243,7 +266,7 @@ async function onSubmit() {
         position: payload.position,
         phone: payload.phone,
         office: payload.office,
-        schedulePermission: payload.schedulePermission,
+        scheduleRole: payload.scheduleRole,
         isDeputy: payload.isDeputy,
         deputyId: payload.deputyId,
         permissions: payload.permissions,
@@ -457,10 +480,28 @@ function setPermValue(key: CrmPermissionKey, value: number) {
                 @update:model-value="setPermValue(mod.key, $event as number)"
               />
             </UFormField>
-            <USwitch
-              v-model="draft.schedulePermission"
-              :label="meta?.scheduleModule.label ?? t.schedPerm"
-            />
+            <UFormField :label="meta?.scheduleModule.label ?? t.schedPerm">
+              <USelect
+                v-model="draft.scheduleRole"
+                :items="scheduleRoleItems"
+                value-key="value"
+                label-key="label"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField
+              v-if="showAssistantDeputySelect"
+              :label="t.schedAssistant"
+              required
+            >
+              <USelect
+                v-model="draft.deputyId"
+                :items="assistantDeputyItems"
+                value-key="value"
+                label-key="label"
+                class="w-full"
+              />
+            </UFormField>
           </template>
         </section>
 

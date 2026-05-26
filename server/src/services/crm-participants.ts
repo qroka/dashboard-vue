@@ -1,5 +1,10 @@
 import type { Env } from '../config/env.js'
 import type { CrmParticipant } from '../types/crm.js'
+import {
+  getParticipantsByIdsFromMysql,
+  listParticipantsFromMysql,
+  participantsMysqlEnabled,
+} from './crm-participants-mysql.js'
 
 /** Демо-участники (id совпадают с условными id в corporate.users). */
 const MOCK_PARTICIPANTS: CrmParticipant[] = [
@@ -53,6 +58,9 @@ export class CrmParticipantsService {
     if (this.env.CRM_MOCK)
       return filterMock(MOCK_PARTICIPANTS, search)
 
+    if (participantsMysqlEnabled(this.env))
+      return listParticipantsFromMysql(this.env, search)
+
     return this.fetchFromCrm({ search })
   }
 
@@ -68,6 +76,9 @@ export class CrmParticipantsService {
 
     if (this.env.CRM_MOCK)
       return filterMockByIds(MOCK_PARTICIPANTS, unique)
+
+    if (participantsMysqlEnabled(this.env))
+      return getParticipantsByIdsFromMysql(this.env, unique)
 
     try {
       return await this.fetchFromCrm({ ids: unique })

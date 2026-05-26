@@ -388,8 +388,8 @@ export function filterScheduleBlocks(
 
 export function schedulePathForSlug(slug: ScheduleTitleValue): string {
   if (slug === 'general')
-    return '/schedule'
-  return `/schedule/${slug}`
+    return '/'
+  return `/${slug}`
 }
 
 /** Первая дата вида ДД.ММ.ГГГГ из заголовка дня, напр. «Сегодня 12.05.2025 Вторник». */

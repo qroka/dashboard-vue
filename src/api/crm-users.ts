@@ -14,7 +14,7 @@ export interface ApiCrmUser {
   position: string
   info: string
   notes: string
-  schedulePermission: boolean
+  scheduleRole: number
   isDeputy: boolean
   deputyId: number
   permissions: CrmUserPermissions
@@ -26,6 +26,7 @@ export interface CrmUsersMetaResponse {
   permissionModules: { key: CrmPermissionKey, label: string }[]
   deputies: { id: number, name: string }[]
   scheduleModule: { key: string, column: string, label: string }
+  scheduleRoleLevels: { value: number, label: string }[]
 }
 
 export interface UpdateApiCrmUserPayload {
@@ -58,6 +59,7 @@ export async function fetchCrmUsersMeta(): Promise<CrmUsersMetaResponse> {
     meta: Pick<CrmUsersMetaResponse, 'accessLevels' | 'activeLevels' | 'permissionModules'>
     deputies: CrmUsersMetaResponse['deputies']
     scheduleModule: CrmUsersMetaResponse['scheduleModule']
+    scheduleRoleLevels: CrmUsersMetaResponse['scheduleRoleLevels']
     permissionColumns: CrmUsersMetaResponse['permissionModules']
   }>('/api/crm-users/meta')
   return {
@@ -66,10 +68,11 @@ export async function fetchCrmUsersMeta(): Promise<CrmUsersMetaResponse> {
     permissionModules: res.permissionColumns ?? res.meta.permissionModules,
     deputies: res.deputies ?? [],
     scheduleModule: res.scheduleModule ?? {
-      key: 'schedulePermission',
+      key: 'scheduleRole',
       column: 'u_prem9',
       label: 'График заместителей',
     },
+    scheduleRoleLevels: res.scheduleRoleLevels ?? [],
   }
 }
 

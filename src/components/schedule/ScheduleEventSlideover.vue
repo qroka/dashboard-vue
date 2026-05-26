@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { CalendarDate } from '@internationalized/date'
 import { computed, reactive, ref, watch } from 'vue'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 import {
@@ -13,7 +12,6 @@ import {
   previewScheduleFile,
   scheduleFileDisplaySize,
   parseDateFromScheduleBlockTitle,
-  parseScheduleDateString,
   scheduleParticipantKey,
 } from '../../utils/schedule'
 import type {
@@ -162,27 +160,6 @@ watch(
   },
   { immediate: true },
 )
-
-const createAvailableDates = computed(() =>
-  (props.createDayBlocks ?? [])
-    .map(b => parseDateFromScheduleBlockTitle(b.title))
-    .filter((d): d is string => Boolean(d)),
-)
-
-const createCalendarRange = computed((): {
-  min: CalendarDate | undefined
-  max: CalendarDate | undefined
-} => {
-  if (!isCreate.value)
-    return { min: undefined, max: undefined }
-  const parsed = createAvailableDates.value
-    .map(parseScheduleDateString)
-    .filter((d): d is CalendarDate => Boolean(d))
-    .sort((a, b) => a.compare(b))
-  if (!parsed.length)
-    return { min: undefined, max: undefined }
-  return { min: parsed[0], max: parsed[parsed.length - 1] }
-})
 
 watch(
   () => draft.allDay,
@@ -350,13 +327,10 @@ function onCancelEdit() {
         />
 
         <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:gap-3">
-          <UFormField :label="isCreate ? 'День' : 'Дата'" name="date" class="w-full shrink-0 sm:w-64">
+          <UFormField label="Дата" name="date" class="w-full shrink-0 sm:w-64">
             <ScheduleDatePicker
               v-model="draft.date"
               :disabled="!editable"
-              :available-dates="isCreate ? createAvailableDates : undefined"
-              :min-value="isCreate ? createCalendarRange.min : undefined"
-              :max-value="isCreate ? createCalendarRange.max : undefined"
             />
           </UFormField>
           <UFormField v-if="!draft.allDay" label="Время" name="time" class="min-w-0 flex-1">

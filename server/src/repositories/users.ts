@@ -4,7 +4,8 @@ import {
   SCHEDULE_SUBSTITUTE_SLUGS,
   type ScheduleSubstituteSlug,
 } from '../constants/schedule-slugs.js'
-import type { LocalUser, UserAccessProfile } from '../types/auth.js'
+import type { LocalUser, PublicUserProfile, UserAccessProfile } from '../types/auth.js'
+import { roleLabel } from '../services/event-permissions.js'
 
 interface UserRow {
   id: number
@@ -50,7 +51,7 @@ function listModeratedSubstituteSlugs(moderatorUserId: number): string[] {
 function editableSubstituteSlugsFor(user: LocalUser): string[] {
   if (user.role === 'admin')
     return [...SCHEDULE_SUBSTITUTE_SLUGS]
-  if (user.role === 'manager' && user.substituteSlug)
+  if ((user.role === 'manager' || user.role === 'assistant') && user.substituteSlug)
     return [user.substituteSlug]
   if (user.role === 'moderator')
     return listModeratedSubstituteSlugs(user.id)
@@ -100,15 +101,72 @@ export function findUserAccessById(id: number): UserAccessProfile | null {
   }
 }
 
-export function toPublicUserProfile(profile: UserAccessProfile) {
+export function toPublicUserProfile(profile: UserAccessProfile): PublicUserProfile {
   return {
     id: profile.id,
     login: profile.login,
     name: profile.name,
     email: profile.email,
     role: profile.role,
+    roleLabel: roleLabel(profile.role),
     externalUserId: profile.externalUserId,
     substituteSlug: profile.substituteSlug,
     editableSubstituteSlugs: profile.editableSubstituteSlugs,
   }
+}
+
+export interface UpsertCrmLocalUserInput {
+  externalUserId: number
+  login: string
+  name: string
+  email: string | null
+  role: LocalUser['role']
+  substituteSlug: string | null
+}
+
+/** Создать или обновить локального пользователя по данным CRM (SSO / crm-bridge). */
+export function upsertUserFromCrm(input: UpsertCrmLocalUserInput): LocalUser {
+  const db = getDb()
+  const existing = db
+    .prepare(
+      `SELECT id, login, name, email, role, external_user_id, substitute_slug
+       FROM users WHERE external_user_id = ? OR login = ? COLLATE NOCASE`,
+    )
+    .get(input.externalUserId, input.login) as Omit<UserRow, 'password_hash'> | undefined
+
+  if (existing) {
+    db.prepare(
+      `UPDATE users
+       SET login = ?, name = ?, email = ?, role = ?,
+           external_user_id = ?, substitute_slug = ?
+       WHERE id = ?`,
+    ).run(
+      input.login,
+      input.name,
+      input.email,
+      input.role,
+      input.externalUserId,
+      input.substituteSlug,
+      existing.id,
+    )
+    return findUserById(existing.id)!
+  }
+
+  const randomPass = bcrypt.hashSync(`crm-sso-${input.externalUserId}-${Date.now()}`, 10)
+  const result = db
+    .prepare(
+      `INSERT INTO users (login, password_hash, name, email, role, external_user_id, substitute_slug)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      input.login,
+      randomPass,
+      input.name,
+      input.email,
+      input.role,
+      input.externalUserId,
+      input.substituteSlug,
+    )
+
+  return findUserById(Number(result.lastInsertRowid))!
 }

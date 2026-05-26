@@ -22,7 +22,7 @@ async function onSubmit() {
   loading.value = true
   try {
     await login(loginName.value.trim(), password.value)
-    await router.replace('/schedule')
+    await router.replace('/')
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Не удалось войти'
   } finally {
@@ -39,7 +39,7 @@ async function onSubmit() {
           Вход в CRM
         </h1>
         <p class="mt-1 text-sm text-muted">
-          Локальная учётная запись (SQLite)
+          Логин и пароль — как в CRM. Локальная учётка admin — только если настроен SEED_USER_* в server/.env.
         </p>
       </template>
 

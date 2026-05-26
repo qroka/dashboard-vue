@@ -24,7 +24,7 @@ const links = computed(() => {
     slot: 'schedule-nav',
     label: 'График заместителей',
     icon: 'i-lucide-calendar-range',
-    to: '/schedule',
+    to: '/',
     defaultOpen: true,
     type: 'trigger',
     children: scheduleNavChildren,
@@ -33,14 +33,6 @@ const links = computed(() => {
   const bottom: NavigationMenuItem[] = []
 
   if (canViewLogs.value) {
-    bottom.push({
-      label: 'Пользователи',
-      icon: 'i-lucide-users',
-      to: '/customers',
-      onSelect: () => {
-        open.value = false
-      },
-    })
     bottom.push({
       label: 'Журнал',
       icon: 'i-lucide-scroll-text',

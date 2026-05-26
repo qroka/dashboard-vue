@@ -2,7 +2,7 @@
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-void router.replace('/schedule')
+void router.replace('/')
 </script>
 
 <template>
