@@ -9,7 +9,7 @@ alwaysApply: true
 
 - Файл: `data/crm.sqlite` (путь `SQLITE_PATH` от `server/`).
 - **Пользователи и вход** — таблица `users`, bcrypt, JWT. **Не ASU.**
-- **Роли** — `admin` (всё), `manager` (график `substitute_slug`, CRUD только свой), `moderator` (как manager, CRUD по `moderator_assignments`), `user` (только просмотр). Скрытые мероприятия: видны участнику (`external_user_id` в `event_participants`) и админу; остальным — только не скрытые.
+- **Роли** — `admin` (всё), `manager` (график `substitute_slug`, CRUD только свой), `moderator` (как manager, CRUD по `moderator_assignments`), `user` (только просмотр, **исполнитель**). Скрытые: в UI с бейджем «Скрыто» — у `admin`, редактора графика (`substitute_slug`), **исполнителя (`user`)**; у остальных ролей — только если пользователь в участниках/организаторе; прочим — только не скрытые.
 - **Мероприятия** — `events`, `event_participants` (только `external_user_id`), `event_attachments`.
 - Миграции: `server/db/migrations/*.sql`.
 
