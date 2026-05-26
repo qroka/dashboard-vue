@@ -55,6 +55,7 @@ export function apiEventToScheduleRow(event: ApiEvent): ScheduleRow {
     placeAddress: event.placeAddress,
     topic: event.topic,
     hidden: event.hidden,
+    viewRestricted: Boolean(event.viewRestricted),
     participants,
     attachmentsLabel: event.attachmentsLabel,
     attachmentFiles: event.attachments.map(a => ({

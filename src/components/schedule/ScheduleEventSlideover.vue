@@ -13,6 +13,8 @@ import {
   scheduleFileDisplaySize,
   parseDateFromScheduleBlockTitle,
   scheduleParticipantKey,
+  isScheduleRowViewRestricted,
+  formatScheduleRowTime,
 } from '../../utils/schedule'
 import type {
   ScheduleAttachmentFile,
@@ -63,6 +65,9 @@ const emit = defineEmits<{
 
 const editable = computed(() => Boolean(props.editable || props.isCreate))
 const isCreate = computed(() => Boolean(props.isCreate))
+const viewRestricted = computed(() =>
+  props.selection ? isScheduleRowViewRestricted(props.selection.row) : false,
+)
 
 const d = computed(() => props.selection?.row.detail)
 
@@ -313,7 +318,35 @@ function onCancelEdit() {
     </template>
 
     <template v-if="selection" #body>
+      <div
+        v-if="viewRestricted && !editable"
+        class="flex flex-col gap-4 px-1 py-2"
+      >
+        <p class="text-sm text-muted">
+          Мероприятие скрыто. Вам доступны только дата и время проведения.
+        </p>
+        <div class="flex flex-wrap gap-6 text-sm">
+          <div>
+            <p class="text-xs text-dimmed">
+              Дата
+            </p>
+            <p class="font-medium text-default">
+              {{ draft.date || '—' }}
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-dimmed">
+              Время
+            </p>
+            <p class="font-medium text-default tabular-nums">
+              {{ formatScheduleRowTime(selection.row) }}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <UForm
+        v-else
         :id="EVENT_FORM_ID"
         :state="draft"
         :validate="validateEventForm"

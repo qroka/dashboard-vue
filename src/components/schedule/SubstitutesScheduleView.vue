@@ -30,6 +30,7 @@ import {
   formatSchedulePlace,
   formatScheduleRowTime,
   isScheduleRowAllDay,
+  isScheduleRowViewRestricted,
   buildScheduleDayBlockHeading,
   parseDateFromScheduleBlockTitle,
   parseScheduleSlugFromPath,
@@ -603,28 +604,35 @@ function cancelDeleteEvent() {
                       <span class="truncate text-xs font-medium text-default">{{ c.group.name }}</span>
                     </div>
 
-                    <p class="line-clamp-4 text-sm font-medium leading-snug text-highlighted">
-                      {{ c.row.topic }}
-                    </p>
+                    <template v-if="isScheduleRowViewRestricted(c.row)">
+                      <p class="text-sm text-muted">
+                        Скрытое мероприятие — доступно только время
+                      </p>
+                    </template>
+                    <template v-else>
+                      <p class="line-clamp-4 text-sm font-medium leading-snug text-highlighted">
+                        {{ c.row.topic }}
+                      </p>
 
-                    <p class="mt-1.5 line-clamp-2 text-xs text-muted">
-                      {{ formatSchedulePlace(c.row) }}
-                    </p>
+                      <p class="mt-1.5 line-clamp-2 text-xs text-muted">
+                        {{ formatSchedulePlace(c.row) }}
+                      </p>
 
-                    <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <div class="flex min-w-0 items-center">
-                        <div class="flex -space-x-1.5">
-                          <UAvatar v-for="(p, pi) in c.row.participants.slice(0, 3)" :key="pi" :src="p.avatarSrc"
-                            :alt="p.name" size="xs" class="ring-2 ring-bg" />
+                      <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex min-w-0 items-center">
+                          <div class="flex -space-x-1.5">
+                            <UAvatar v-for="(p, pi) in c.row.participants.slice(0, 3)" :key="pi" :src="p.avatarSrc"
+                              :alt="p.name" size="xs" class="ring-2 ring-bg" />
+                          </div>
+                          <span v-if="c.row.participants.length > 3"
+                            class="ms-1.5 shrink-0 text-xs text-dimmed tabular-nums">
+                            +{{ c.row.participants.length - 3 }}
+                          </span>
                         </div>
-                        <span v-if="c.row.participants.length > 3"
-                          class="ms-1.5 shrink-0 text-xs text-dimmed tabular-nums">
-                          +{{ c.row.participants.length - 3 }}
-                        </span>
+                        <UIcon v-if="c.row.attachmentFiles.length" name="i-lucide-paperclip"
+                          class="size-4 shrink-0 text-dimmed" :title="c.row.attachmentsLabel" />
                       </div>
-                      <UIcon v-if="c.row.attachmentFiles.length" name="i-lucide-paperclip"
-                        class="size-4 shrink-0 text-dimmed" :title="c.row.attachmentsLabel" />
-                    </div>
+                    </template>
                   </div>
                 </template>
               </div>
@@ -704,22 +712,33 @@ function cancelDeleteEvent() {
                       </div>
                       <div
                         class="flex min-h-[100px] items-center border-r border-default p-4 text-sm leading-5 text-default">
-                        <span class="min-w-0 whitespace-normal wrap-break-word">{{ formatSchedulePlace(entry.row) }}</span>
+                        <span
+                          v-if="!isScheduleRowViewRestricted(entry.row)"
+                          class="min-w-0 whitespace-normal wrap-break-word"
+                        >{{ formatSchedulePlace(entry.row) }}</span>
+                        <span v-else class="text-muted">—</span>
                       </div>
                       <div
                         class="flex min-h-[100px] flex-col justify-center border-r border-default p-4 text-sm leading-5 text-default">
-                        {{ entry.row.topic }}
+                        <span v-if="!isScheduleRowViewRestricted(entry.row)">{{ entry.row.topic }}</span>
+                        <span v-else class="text-muted">Скрытое мероприятие</span>
                       </div>
                       <div
                         class="flex min-h-[100px] flex-wrap content-center items-center gap-3 border-r border-default p-4"
                         @click.stop>
-                        <ScheduleParticipantPopoverChip v-for="(participant, pi) in entry.row.participants" :key="pi"
-                          variant="table" :participant="participant" />
+                        <template v-if="!isScheduleRowViewRestricted(entry.row)">
+                          <ScheduleParticipantPopoverChip
+                            v-for="(participant, pi) in entry.row.participants"
+                            :key="pi"
+                            variant="table"
+                            :participant="participant"
+                          />
+                        </template>
                       </div>
                       <div class="flex min-h-[100px] min-w-0 items-center justify-end border-r border-default p-4"
                         @click.stop>
                         <ScheduleAttachmentsPopover
-                          v-if="entry.row.attachmentFiles.length"
+                          v-if="!isScheduleRowViewRestricted(entry.row) && entry.row.attachmentFiles.length"
                           :files="entry.row.attachmentFiles"
                           :label="entry.row.attachmentsLabel"
                         />

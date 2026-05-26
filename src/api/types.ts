@@ -52,6 +52,8 @@ export interface ApiEvent {
   attachments: ApiEventAttachment[]
   participants?: ApiCrmParticipant[]
   organizer?: ApiCrmParticipant | null
+  /** Исполнитель-участник: в графике только время, без темы/места. */
+  viewRestricted?: boolean
 }
 
 export interface ApiLoginResponse {

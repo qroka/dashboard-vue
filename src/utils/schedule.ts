@@ -157,6 +157,11 @@ export function scheduleParticipantKey(participant: ScheduleParticipant): string
     : participant.name
 }
 
+/** Скрытое мероприятие для исполнителя-участника: в графике видно только время. */
+export function isScheduleRowViewRestricted(row: ScheduleRow): boolean {
+  return Boolean(row.hidden && row.viewRestricted)
+}
+
 export function formatAttachmentFileSize(bytes: number): string {
   if (bytes < 1024)
     return `${bytes} Б`

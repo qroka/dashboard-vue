@@ -24,6 +24,8 @@ import {
   canViewEvent,
   filterEventsForProfile,
 } from '../services/event-permissions.js'
+import type { UserAccessProfile } from '../types/auth.js'
+import { applyEventVisibilityForProfile } from '../utils/event-visibility.js'
 
 const createEventSchema = z.object({
   substituteSlug: z.string().min(1),
@@ -77,6 +79,7 @@ function enrichWithMap(
 async function enrichEvent(
   event: EventRecord,
   crm: CrmParticipantsService,
+  profile: UserAccessProfile,
 ) {
   const ids = [
     ...event.participantIds,
@@ -84,17 +87,20 @@ async function enrichEvent(
   ]
   const participants = await crm.getByIds(ids)
   const byId = new Map(participants.map(p => [p.id, p]))
-  return enrichWithMap(event, byId)
+  return applyEventVisibilityForProfile(enrichWithMap(event, byId), profile)
 }
 
 async function enrichEvents(
   events: EventRecord[],
   crm: CrmParticipantsService,
+  profile: UserAccessProfile,
 ) {
   const allIds = collectExternalIds(events)
   const participants = await crm.getByIds(allIds)
   const byId = new Map(participants.map(p => [p.id, p]))
-  return events.map(event => enrichWithMap(event, byId))
+  return events.map(event =>
+    applyEventVisibilityForProfile(enrichWithMap(event, byId), profile),
+  )
 }
 
 export const eventsRoutes: FastifyPluginAsync = async app => {
@@ -119,7 +125,7 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
           profile,
           listEvents(parsed.data),
         )
-        const enriched = await enrichEvents(events, crm)
+        const enriched = await enrichEvents(events, crm, profile)
         return { success: true, events: enriched }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to list events'
@@ -144,7 +150,7 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
       }
 
       try {
-        return { success: true, event: await enrichEvent(event, crm) }
+        return { success: true, event: await enrichEvent(event, crm, profile) }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to load event'
         return reply.status(502).send({ success: false, error: message })
@@ -194,7 +200,7 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
       try {
         return reply.status(201).send({
           success: true,
-          event: await enrichEvent(event, crm),
+          event: await enrichEvent(event, crm, profile),
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to enrich event'
@@ -262,7 +268,7 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
       }, request.log)
 
       try {
-        return { success: true, event: await enrichEvent(event, crm) }
+        return { success: true, event: await enrichEvent(event, crm, profile) }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to enrich event'
         return reply.status(502).send({ success: false, error: message })

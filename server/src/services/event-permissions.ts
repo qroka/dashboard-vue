@@ -24,12 +24,22 @@ export function canViewEvent(
   // Редактор графика видит свои скрытые мероприятия (в т.ч. только что скрыл)
   if (canEditSubstituteSlug(profile, event.substituteSlug))
     return true
-  // Исполнитель (u_prem9=0, role user): скрытые не убираем из API — в UI пометка «Скрыто»
-  if (profile.role === 'user')
-    return true
   if (!event.hidden)
     return true
+  // Скрытое: исполнитель-участник видит слот в графике (только время в UI)
   return isEventParticipant(profile, event)
+}
+
+/** Исполнитель-участник: в API и UI только время, без темы/места/состава. */
+export function shouldRedactHiddenEvent(
+  profile: UserAccessProfile,
+  event: Pick<EventRecord, 'hidden' | 'substituteSlug'>,
+): boolean {
+  if (!event.hidden)
+    return false
+  if (profile.role !== 'user')
+    return false
+  return !canEditSubstituteSlug(profile, event.substituteSlug)
 }
 
 export function canEditSubstituteSlug(
