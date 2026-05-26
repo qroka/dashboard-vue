@@ -40,6 +40,7 @@ import {
 import ScheduleAttachmentsPopover from './ScheduleAttachmentsPopover.vue'
 import ScheduleEventSlideover from './ScheduleEventSlideover.vue'
 import ScheduleHiddenBadge from './ScheduleHiddenBadge.vue'
+import ScheduleHiddenEventLabel from './ScheduleHiddenEventLabel.vue'
 import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue'
 
 /** Карточка на доске: столбец = день (`ScheduleDateBlock`). */
@@ -93,6 +94,11 @@ const scheduleGridTemplate = computed(() =>
   isScheduleGeneralView.value
     ? '77px 200px 256px 1fr 1fr 140px'
     : '77px 256px 1fr 1fr 140px 52px')
+
+/** Объединение колонок «место … приложения» для скрытого мероприятия (исполнитель). */
+function hiddenEventDetailsGridColumn(generalView: boolean): string {
+  return generalView ? '2 / 7' : '2 / 6'
+}
 
 const visibleBlocks = computed(() =>
   filterScheduleBySubstitute(scheduleBlocks.value, scope.value))
@@ -586,7 +592,9 @@ function cancelDeleteEvent() {
                         class="text-xs text-dimmed"
                         :class="{ 'tabular-nums': !isScheduleRowAllDay(c.row) }"
                       >{{ formatScheduleRowTime(c.row) }}</span>
-                      <ScheduleHiddenBadge v-if="c.row.hidden" />
+                      <ScheduleHiddenBadge
+                        v-if="c.row.hidden && !isScheduleRowViewRestricted(c.row)"
+                      />
                       <div class="ms-auto shrink-0" @click.stop>
                         <UDropdownMenu
                           v-if="rowContextMenuItems(c.block, c.group, c.row).length"
@@ -604,11 +612,10 @@ function cancelDeleteEvent() {
                       <span class="truncate text-xs font-medium text-default">{{ c.group.name }}</span>
                     </div>
 
-                    <template v-if="isScheduleRowViewRestricted(c.row)">
-                      <p class="text-sm text-muted">
-                        Скрытое мероприятие — доступно только время
-                      </p>
-                    </template>
+                    <ScheduleHiddenEventLabel
+                      v-if="isScheduleRowViewRestricted(c.row)"
+                      class="py-1"
+                    />
                     <template v-else>
                       <p class="line-clamp-4 text-sm font-medium leading-snug text-highlighted">
                         {{ c.row.topic }}
@@ -698,51 +705,65 @@ function cancelDeleteEvent() {
                       @keydown.enter.prevent="onScheduleRowActivate(block, entry.group, entry.row)"
                       @keydown.space.prevent="onScheduleRowActivate(block, entry.group, entry.row)">
                       <div
-                        class="flex min-h-[100px] flex-col justify-center gap-1.5 border-r border-default p-4 text-sm text-default">
-                        <span>{{ formatScheduleRowTime(entry.row) }}</span>
-                        <ScheduleHiddenBadge v-if="entry.row.hidden" />
-                      </div>
-                      <div
-                        v-if="isScheduleGeneralView"
-                        class="flex min-h-[100px] items-center gap-2 border-r border-default p-4"
-                        @click.stop
-                      >
-                        <UAvatar :src="entry.group.avatarSrc" size="sm" class="shrink-0" />
-                        <span class="min-w-0 text-sm font-medium leading-snug text-default">{{ entry.group.name }}</span>
-                      </div>
-                      <div
-                        class="flex min-h-[100px] items-center border-r border-default p-4 text-sm leading-5 text-default">
+                        class="flex min-h-[100px] flex-col justify-center border-r border-default p-4 text-sm text-default">
                         <span
-                          v-if="!isScheduleRowViewRestricted(entry.row)"
-                          class="min-w-0 whitespace-normal wrap-break-word"
-                        >{{ formatSchedulePlace(entry.row) }}</span>
-                        <span v-else class="text-muted">—</span>
+                          class="tabular-nums"
+                          :class="{ 'text-default': !isScheduleRowAllDay(entry.row) }"
+                        >{{ formatScheduleRowTime(entry.row) }}</span>
+                        <ScheduleHiddenBadge
+                          v-if="entry.row.hidden && !isScheduleRowViewRestricted(entry.row)"
+                          class="mt-1.5"
+                        />
                       </div>
-                      <div
-                        class="flex min-h-[100px] flex-col justify-center border-r border-default p-4 text-sm leading-5 text-default">
-                        <span v-if="!isScheduleRowViewRestricted(entry.row)">{{ entry.row.topic }}</span>
-                        <span v-else class="text-muted">Скрытое мероприятие</span>
-                      </div>
-                      <div
-                        class="flex min-h-[100px] flex-wrap content-center items-center gap-3 border-r border-default p-4"
-                        @click.stop>
-                        <template v-if="!isScheduleRowViewRestricted(entry.row)">
+                      <template v-if="isScheduleRowViewRestricted(entry.row)">
+                        <div
+                          class="flex min-h-[100px] items-center border-r border-default p-4"
+                          :style="{ gridColumn: hiddenEventDetailsGridColumn(isScheduleGeneralView) }"
+                        >
+                          <ScheduleHiddenEventLabel />
+                        </div>
+                      </template>
+                      <template v-else>
+                        <div
+                          v-if="isScheduleGeneralView"
+                          class="flex min-h-[100px] items-center gap-2 border-r border-default p-4"
+                          @click.stop
+                        >
+                          <UAvatar :src="entry.group.avatarSrc" size="sm" class="shrink-0" />
+                          <span class="min-w-0 text-sm font-medium leading-snug text-default">{{ entry.group.name }}</span>
+                        </div>
+                        <div
+                          class="flex min-h-[100px] items-center border-r border-default p-4 text-sm leading-5 text-default"
+                        >
+                          <span class="min-w-0 whitespace-normal wrap-break-word">{{ formatSchedulePlace(entry.row) }}</span>
+                        </div>
+                        <div
+                          class="flex min-h-[100px] flex-col justify-center border-r border-default p-4 text-sm leading-5 text-default"
+                        >
+                          {{ entry.row.topic }}
+                        </div>
+                        <div
+                          class="flex min-h-[100px] flex-wrap content-center items-center gap-3 border-r border-default p-4"
+                          @click.stop
+                        >
                           <ScheduleParticipantPopoverChip
                             v-for="(participant, pi) in entry.row.participants"
                             :key="pi"
                             variant="table"
                             :participant="participant"
                           />
-                        </template>
-                      </div>
-                      <div class="flex min-h-[100px] min-w-0 items-center justify-end border-r border-default p-4"
-                        @click.stop>
-                        <ScheduleAttachmentsPopover
-                          v-if="!isScheduleRowViewRestricted(entry.row) && entry.row.attachmentFiles.length"
-                          :files="entry.row.attachmentFiles"
-                          :label="entry.row.attachmentsLabel"
-                        />
-                      </div>
+                        </div>
+                        <div
+                          class="flex min-h-[100px] min-w-0 items-center justify-end border-r border-default p-4"
+                          @click.stop
+                        >
+                          <ScheduleAttachmentsPopover
+                            v-if="entry.row.attachmentFiles.length"
+                            :files="entry.row.attachmentFiles"
+                            :label="entry.row.attachmentsLabel"
+                          />
+                        </div>
+                      </template>
                       <div v-if="!isScheduleGeneralView"
                         class="flex min-h-[100px] items-center justify-center border-default p-1" @click.stop>
                         <UDropdownMenu

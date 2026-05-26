@@ -162,6 +162,21 @@ export function isScheduleRowViewRestricted(row: ScheduleRow): boolean {
   return Boolean(row.hidden && row.viewRestricted)
 }
 
+/** Сокращённое ФИО для таблицы: «Иванов И.И.» (фамилия + инициалы). */
+export function formatParticipantShortName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length)
+    return ''
+  if (parts.length === 1)
+    return parts[0]!
+  const surname = parts[0]!
+  const initials = parts
+    .slice(1)
+    .map(part => `${part.charAt(0).toUpperCase()}.`)
+    .join('')
+  return `${surname} ${initials}`
+}
+
 export function formatAttachmentFileSize(bytes: number): string {
   if (bytes < 1024)
     return `${bytes} Б`

@@ -36,6 +36,7 @@ import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue
 import ScheduleParticipantsField from './ScheduleParticipantsField.vue'
 import ScheduleTimePicker from './ScheduleTimePicker.vue'
 import ScheduleHiddenBadge from './ScheduleHiddenBadge.vue'
+import ScheduleHiddenEventLabel from './ScheduleHiddenEventLabel.vue'
 
 const open = defineModel<boolean>('open', { default: false })
 
@@ -290,7 +291,9 @@ function onCancelEdit() {
             }}
           </p>
           <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-            <ScheduleHiddenBadge v-if="selection.row.hidden" />
+            <ScheduleHiddenBadge
+              v-if="selection.row.hidden && !viewRestricted"
+            />
             <span v-if="headerCreatedAt">{{ headerCreatedAt }}</span>
             <span
               v-if="headerCreatedAt && headerCreatorParticipant"
@@ -322,9 +325,7 @@ function onCancelEdit() {
         v-if="viewRestricted && !editable"
         class="flex flex-col gap-4 px-1 py-2"
       >
-        <p class="text-sm text-muted">
-          Мероприятие скрыто. Вам доступны только дата и время проведения.
-        </p>
+        <ScheduleHiddenEventLabel />
         <div class="flex flex-wrap gap-6 text-sm">
           <div>
             <p class="text-xs text-dimmed">

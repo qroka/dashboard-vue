@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ScheduleParticipant } from '../../types/schedule'
+import { formatParticipantShortName } from '../../utils/schedule'
 
-defineProps<{
+const props = defineProps<{
   participant: ScheduleParticipant
   /** `header` — шапка слайдовера; `field` — форма; `table` — ячейка графика. */
   variant?: 'header' | 'field' | 'table'
@@ -16,6 +18,12 @@ defineProps<{
 const emit = defineEmits<{
   remove: []
 }>()
+
+const displayName = computed(() =>
+  props.variant === 'table'
+    ? formatParticipantShortName(props.participant.name)
+    : props.participant.name,
+)
 </script>
 
 <template>
@@ -42,7 +50,7 @@ const emit = defineEmits<{
       :src="participant.avatarSrc"
       class="size-4 shrink-0"
     />
-    <span>{{ participant.name }}</span>
+    <span>{{ displayName }}</span>
   </div>
   <div
     v-else-if="removable && variant === 'field'"
@@ -129,7 +137,7 @@ const emit = defineEmits<{
           : variant === 'table'
             ? 'text-sm font-medium'
             : 'text-xs font-medium'"
-      >{{ participant.name }}</span>
+      >{{ displayName }}</span>
     </UButton>
     <template #content>
       <div class="flex w-60 flex-col gap-2 rounded-md border border-default bg-default p-2">
