@@ -17,6 +17,6 @@ withDefaults(defineProps<{
       :class="size === 'sm' ? 'size-4' : 'size-5'"
       aria-hidden="true"
     />
-    <span class="font-medium">Скрытое мероприятие</span>
+    <span class="font-medium">Данное мероприятие скрыто</span>
   </div>
 </template>

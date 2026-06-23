@@ -130,8 +130,15 @@ const participantsByKey = computed(() => {
   const map = new Map<string, ScheduleParticipant>()
   for (const participant of props.availableParticipants ?? [])
     map.set(scheduleParticipantKey(participant), participant)
+  for (const participant of props.selection?.row.participants ?? []) {
+    const key = scheduleParticipantKey(participant)
+    if (!map.has(key))
+      map.set(key, participant)
+  }
   return map
 })
+
+const participantsForField = computed(() => [...participantsByKey.value.values()])
 
 const selectedParticipants = computed(() =>
   selectedParticipantKeys.value
@@ -241,6 +248,14 @@ function applyDraftToRow() {
   r.participants = [...selectedParticipants.value]
   if (!r.detail)
     r.detail = {}
+  if (r.detail.organizer) {
+    const orgKey = scheduleParticipantKey(r.detail.organizer)
+    const orgId = r.detail.organizer.externalId
+    const organizerStillSelected = selectedParticipantKeys.value.includes(orgKey)
+      || (orgId != null && selectedParticipants.value.some(p => p.externalId === orgId))
+    if (!organizerStillSelected)
+      delete r.detail.organizer
+  }
   r.detail.date = draft.date
   r.detail.allDay = draft.allDay
   if (!r.apiId && !r.detail.createdAt && !isCreate.value) {
@@ -407,7 +422,7 @@ function onCancelEdit() {
         <UFormField label="Участники">
           <ScheduleParticipantsField
             v-model="selectedParticipantKeys"
-            :available-participants="availableParticipants ?? []"
+            :available-participants="participantsForField"
             :disabled="!editable"
           />
         </UFormField>

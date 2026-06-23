@@ -157,7 +157,7 @@ export function scheduleParticipantKey(participant: ScheduleParticipant): string
     : participant.name
 }
 
-/** Скрытое мероприятие для исполнителя (role user): в графике видно только время. */
+/** Скрытое мероприятие без доступа к деталям: в графике только время и плашка. */
 export function isScheduleRowViewRestricted(row: ScheduleRow): boolean {
   return Boolean(row.hidden && row.viewRestricted)
 }

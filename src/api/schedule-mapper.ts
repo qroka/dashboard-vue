@@ -103,6 +103,15 @@ export function scheduleRowToApiPayload(
   substituteSlug: ScheduleSubstituteSlug,
   eventDate: string,
 ) {
+  const participantIds = row.participants
+    .map(p => p.externalId)
+    .filter((id): id is number => typeof id === 'number' && id > 0)
+
+  const organizerId = row.detail?.organizer?.externalId ?? null
+  const organizerExternalId = organizerId != null && participantIds.includes(organizerId)
+    ? organizerId
+    : null
+
   return {
     substituteSlug,
     eventDate,
@@ -113,12 +122,10 @@ export function scheduleRowToApiPayload(
     topic: row.topic,
     hidden: Boolean(row.hidden),
     completed: Boolean(row.detail?.completed),
-    organizerExternalId: row.detail?.organizer?.externalId ?? null,
+    organizerExternalId,
     attachmentsLabel: row.attachmentsLabel,
     detail: row.detail ?? null,
-    participantIds: row.participants
-      .map(p => p.externalId)
-      .filter((id): id is number => typeof id === 'number'),
+    participantIds,
   }
 }
 

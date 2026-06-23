@@ -73,16 +73,10 @@ function mapEvent(row: EventRow): EventRecord {
   }
 }
 
-function uniqueParticipantIds(
-  participantIds: number[] | undefined,
-  organizerExternalId: number | null | undefined,
-): number[] {
-  const ids = new Set(
+function uniqueParticipantIds(participantIds: number[] | undefined): number[] {
+  return [...new Set(
     (participantIds ?? []).filter(id => Number.isInteger(id) && id > 0),
-  )
-  if (organizerExternalId != null && organizerExternalId > 0)
-    ids.add(organizerExternalId)
-  return [...ids]
+  )]
 }
 
 function setParticipants(eventId: number, participantIds: number[]): void {
@@ -154,12 +148,8 @@ export function createEvent(input: CreateEventInput): EventRecord {
     )
 
   const eventId = Number(insert.lastInsertRowid)
-  const participantIds = uniqueParticipantIds(
-    input.participantIds,
-    input.organizerExternalId ?? null,
-  )
-  if (participantIds.length)
-    setParticipants(eventId, participantIds)
+  const participantIds = uniqueParticipantIds(input.participantIds)
+  setParticipants(eventId, participantIds)
 
   return findEventById(eventId)!
 }
@@ -205,14 +195,8 @@ export function updateEvent(id: number, input: UpdateEventInput): EventRecord | 
     id,
   )
 
-  if (input.participantIds !== undefined || input.organizerExternalId !== undefined) {
-    const organizer = input.organizerExternalId !== undefined
-      ? input.organizerExternalId
-      : existing.organizerExternalId
-    const participants = input.participantIds !== undefined
-      ? input.participantIds
-      : existing.participantIds
-    setParticipants(id, uniqueParticipantIds(participants, organizer))
+  if (input.participantIds !== undefined) {
+    setParticipants(id, uniqueParticipantIds(input.participantIds))
   }
 
   return findEventById(id)

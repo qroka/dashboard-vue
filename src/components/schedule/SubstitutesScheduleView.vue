@@ -95,7 +95,7 @@ const scheduleGridTemplate = computed(() =>
     ? '77px 200px 256px 1fr 1fr 140px'
     : '77px 256px 1fr 1fr 140px 52px')
 
-/** Объединение колонок «место … приложения» для скрытого мероприятия (исполнитель). */
+/** Объединение колонок «место … приложения» для скрытого мероприятия без доступа к деталям. */
 function hiddenEventDetailsGridColumn(generalView: boolean): string {
   return generalView ? '2 / 7' : '2 / 6'
 }
