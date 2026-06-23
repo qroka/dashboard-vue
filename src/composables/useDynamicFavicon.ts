@@ -18,12 +18,21 @@ export interface UseDynamicFaviconOptions {
   rel?: string
 }
 
+function resolvePublicAsset(path: string): string {
+  const base = import.meta.env.BASE_URL || '/'
+  const asset = path.replace(/^\//, '')
+  if (base === '/' || base === '')
+    return `/${asset}`
+  const normalizedBase = base.endsWith('/') ? base.slice(0, -1) : base
+  return `${normalizedBase}/${asset}`
+}
+
 /**
  * Keeps the browser favicon in sync with Nuxt UI primary color (`--ui-primary`).
  * Client-only; safe to call during SSR (no-op until mounted).
  */
 export function useDynamicFavicon(options: UseDynamicFaviconOptions = {}) {
-  const source = options.source ?? new URL('logoASR.svg', import.meta.env.BASE_URL).pathname
+  const source = options.source ?? resolvePublicAsset('logoASR.svg')
   const rel = options.rel ?? 'icon'
 
   const primaryColor = ref<string | null>(null)
