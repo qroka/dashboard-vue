@@ -209,17 +209,6 @@ const boardColumns = computed<ScheduleBoardColumn[]>(() =>
   }))
 )
 
-function accentCardBorder(accent: ScheduleUserGroup['accent']): string {
-  const map: Record<ScheduleUserGroup['accent'], string> = {
-    rose: 'border-l-[3px] border-l-rose-500',
-    blue: 'border-l-[3px] border-l-blue-600',
-    violet: 'border-l-[3px] border-l-violet-600',
-    amber: 'border-l-[3px] border-l-amber-500',
-    emerald: 'border-l-[3px] border-l-emerald-600',
-  }
-  return map[accent]
-}
-
 function accentSurfaceClass(accent: ScheduleUserGroup['accent']) {
   const map: Record<ScheduleUserGroup['accent'], string> = {
     rose: 'bg-[rgba(251,44,54,0.04)]',
@@ -621,7 +610,7 @@ function cancelDeleteEvent() {
         </UEmpty>
 
         <div v-else-if="view === 'board'" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div class="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden px-0.5 pb-2 sm:gap-4">
+          <div class="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden p-px sm:gap-4">
             <div
               v-for="col in boardColumns"
               :key="col.block.id"
@@ -682,10 +671,9 @@ function cancelDeleteEvent() {
                 <template v-for="c in col.cards" :key="c.cardKey">
                   <div
                     :class="[
-                      'group rounded-r-xl border border-default bg-default p-3.5 shadow-xs transition-[box-shadow,transform,background-color,border-color]',
-                      accentCardBorder(c.group.accent),
+                      'group rounded-xl border border-default bg-default p-3.5 shadow-xs transition-[box-shadow,transform,background-color,border-color]',
                       isScheduleGeneralView && accentSurfaceClass(c.group.accent),
-                      'cursor-pointer hover:-translate-y-px hover:border-primary/20 hover:bg-elevated/25 hover:shadow-sm',
+                      'cursor-pointer hover:-translate-y-px hover:border-primary/20 hover:bg-elevated/40 hover:shadow-sm',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     ]"
                     role="button"

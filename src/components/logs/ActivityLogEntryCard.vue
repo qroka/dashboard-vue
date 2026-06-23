@@ -75,8 +75,9 @@ function openEvent() {
   <UCard
     variant="subtle"
     class="shrink-0 overflow-hidden transition-colors hover:ring-primary/20"
+    :ui="{ body: 'p-0' }"
   >
-    <div class="flex w-full items-start gap-3 px-4 py-3">
+    <div class="flex w-full items-start gap-3 p-3">
       <div
         class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated ring ring-default"
       >
@@ -174,7 +175,7 @@ function openEvent() {
 
     <div
       v-if="expanded && hasDetails"
-      class="border-t border-default bg-elevated/30 px-4 py-3"
+      class="border-t border-default bg-elevated/30 p-3"
     >
       <div v-if="meta?.fields?.length" class="mb-3 space-y-2">
         <p class="text-xs font-medium tracking-wide text-dimmed uppercase">
