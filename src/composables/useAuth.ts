@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { apiFetch, getAuthToken, setAuthToken } from '../api/client'
 import type { ApiLoginResponse, ApiUser } from '../api/types'
+import { getClientHostname } from '../utils/client-hostname'
 
 const user = ref<ApiUser | null>(null)
 const ready = ref(false)
@@ -31,7 +32,12 @@ export function useAuth() {
   }
 
   async function login(loginName: string, password: string): Promise<void> {
-    const body = JSON.stringify({ login: loginName, password })
+    const clientHostname = getClientHostname()
+    const body = JSON.stringify({
+      login: loginName,
+      password,
+      ...(clientHostname ? { clientHostname } : {}),
+    })
     const endpoints = ['/api/auth/crm-bridge', '/api/auth/login'] as const
     let lastError = 'Ошибка входа'
 

@@ -12,6 +12,7 @@ export interface ActivityLogRow {
   entityType: string | null
   entityId: number | null
   ipAddress: string | null
+  clientHostname: string | null
   meta: Record<string, unknown> | null
 }
 
@@ -64,6 +65,7 @@ function mapRow(row: {
   entity_type: string | null
   entity_id: number | null
   ip_address: string | null
+  client_hostname: string | null
   meta_json: string | null
 }): ActivityLogRow {
   return {
@@ -78,6 +80,7 @@ function mapRow(row: {
     entityType: row.entity_type,
     entityId: row.entity_id,
     ipAddress: row.ip_address,
+    clientHostname: row.client_hostname,
     meta: parseMeta(row.meta_json),
   }
 }
@@ -118,9 +121,10 @@ export function listActivityLogs(query: ListActivityLogsQuery): {
       lower(message) LIKE ? OR lower(action) LIKE ?
       OR lower(COALESCE(user_login, '')) LIKE ?
       OR lower(COALESCE(user_name, '')) LIKE ?
+      OR lower(COALESCE(client_hostname, '')) LIKE ?
       OR lower(COALESCE(meta_json, '')) LIKE ?
     )`)
-    params.push(term, term, term, term, term)
+    params.push(term, term, term, term, term, term)
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
@@ -138,7 +142,7 @@ export function listActivityLogs(query: ListActivityLogsQuery): {
   const rows = db
     .prepare(
       `SELECT id, created_at, level, category, action, message,
-              user_login, user_name, entity_type, entity_id, ip_address, meta_json
+              user_login, user_name, entity_type, entity_id, ip_address, client_hostname, meta_json
        FROM activity_logs ${where}
        ORDER BY datetime(created_at) DESC, id DESC
        LIMIT ? OFFSET ?`,

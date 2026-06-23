@@ -1,3 +1,5 @@
+import { getClientHostname } from '../utils/client-hostname'
+
 const TOKEN_KEY = 'crm_auth_token'
 
 export class ApiError extends Error {
@@ -33,6 +35,10 @@ export async function apiFetch<T>(
   const token = getAuthToken()
   if (token)
     headers.set('Authorization', `Bearer ${token}`)
+
+  const clientHostname = getClientHostname()
+  if (clientHostname)
+    headers.set('X-Client-Hostname', clientHostname)
 
   const response = await fetch(path, { ...options, headers })
   const text = await response.text()

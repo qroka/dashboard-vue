@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { CrmParticipantsService } from '../services/crm-participants.js'
-import { getRequestIp, logActivity } from '../services/activity-log.js'
+import { getRequestLogClient, logActivity } from '../services/activity-log.js'
 import { jwtActor } from '../utils/request-context.js'
 
 const listQuerySchema = z.object({
@@ -44,7 +44,7 @@ export const participantsRoutes: FastifyPluginAsync = async app => {
           userId: actor?.userId,
           userLogin: actor?.userLogin,
           userName: actor?.userName,
-          ipAddress: getRequestIp(request),
+          ...getRequestLogClient(request),
         }, request.log)
         return reply.status(502).send({ success: false, error: message })
       }
@@ -77,7 +77,7 @@ export const participantsRoutes: FastifyPluginAsync = async app => {
           userId: actor?.userId,
           userLogin: actor?.userLogin,
           userName: actor?.userName,
-          ipAddress: getRequestIp(request),
+          ...getRequestLogClient(request),
         }, request.log)
         return reply.status(502).send({ success: false, error: message })
       }

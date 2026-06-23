@@ -100,7 +100,7 @@ const scheduleGridTemplate = computed(() =>
 
 /** Объединение колонок «место … приложения» для скрытого мероприятия без доступа к деталям. */
 function hiddenEventDetailsGridColumn(generalView: boolean): string {
-  return generalView ? '2 / 7' : '2 / 6'
+  return generalView ? '3 / 7' : '2 / 6'
 }
 
 const visibleBlocks = computed(() =>
@@ -864,6 +864,14 @@ function cancelDeleteEvent() {
                         >{{ formatScheduleRowTime(entry.row) }}</span>
                       </div>
                       <template v-if="isScheduleRowViewRestricted(entry.row)">
+                        <div
+                          v-if="isScheduleGeneralView"
+                          class="flex min-h-[100px] items-center gap-2 border-r border-default p-4"
+                          @click.stop
+                        >
+                          <UAvatar :src="entry.group.avatarSrc" size="sm" class="shrink-0" />
+                          <span class="min-w-0 text-sm font-medium leading-snug text-default">{{ entry.group.name }}</span>
+                        </div>
                         <div
                           class="flex min-h-[100px] items-center border-r border-default p-4"
                           :style="{ gridColumn: hiddenEventDetailsGridColumn(isScheduleGeneralView) }"

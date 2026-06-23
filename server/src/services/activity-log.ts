@@ -21,7 +21,33 @@ export interface LogActivityInput {
   entityType?: string | null
   entityId?: number | null
   ipAddress?: string | null
+  clientHostname?: string | null
   meta?: Record<string, unknown> | null
+}
+
+export function getRequestClientHostname(request: FastifyRequest): string | undefined {
+  const headers = request.headers
+  const candidates = [
+    headers['x-client-hostname'],
+    headers['x-computer-name'],
+    headers['x-workstation-name'],
+    headers['x-machine-name'],
+  ]
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim())
+      return value.trim()
+  }
+  return undefined
+}
+
+export function getRequestLogClient(request: FastifyRequest): {
+  ipAddress?: string
+  clientHostname?: string
+} {
+  return {
+    ipAddress: getRequestIp(request),
+    clientHostname: getRequestClientHostname(request),
+  }
 }
 
 export function getRequestIp(request: FastifyRequest): string | undefined {
@@ -48,8 +74,8 @@ export function logActivity(
         `INSERT INTO activity_logs (
           level, category, action, message,
           user_id, user_login, user_name,
-          entity_type, entity_id, ip_address, meta_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          entity_type, entity_id, ip_address, client_hostname, meta_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         input.level,
@@ -62,6 +88,7 @@ export function logActivity(
         input.entityType ?? null,
         input.entityId ?? null,
         input.ipAddress ?? null,
+        input.clientHostname ?? null,
         input.meta ? JSON.stringify(input.meta) : null,
       )
   } catch (error) {

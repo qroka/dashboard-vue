@@ -7,7 +7,7 @@ import {
   upsertUserFromCrm,
 } from '../repositories/users.js'
 import type { AuthUserPayload, LocalUser } from '../types/auth.js'
-import { getRequestIp, logActivity } from '../services/activity-log.js'
+import { getRequestLogClient, logActivity } from '../services/activity-log.js'
 import {
   fetchCrmLookupUser,
   mapCrmUserToLocalFields,
@@ -17,6 +17,7 @@ import {
 const loginSchema = z.object({
   login: z.string().min(1),
   password: z.string().min(1),
+  clientHostname: z.string().max(255).optional(),
 })
 
 const crmSsoSchema = z.object({
@@ -47,6 +48,18 @@ function toJwtPayload(user: LocalUser): AuthUserPayload {
   }
 }
 
+function activityClientFromRequest(
+  request: Parameters<typeof getRequestLogClient>[0],
+  bodyHostname?: string | null,
+) {
+  const client = getRequestLogClient(request)
+  const hostname = client.clientHostname ?? bodyHostname?.trim() || undefined
+  return {
+    ipAddress: client.ipAddress,
+    clientHostname: hostname,
+  }
+}
+
 export const authRoutes: FastifyPluginAsync = async app => {
   app.post('/auth/login', async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body)
@@ -58,7 +71,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
       })
     }
 
-    const ip = getRequestIp(request)
+    const logClient = activityClientFromRequest(request, parsed.data.clientHostname)
     let user: LocalUser | null = null
     let viaCrm = false
 
@@ -82,7 +95,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
         action: 'auth.login_failed',
         message: `Неудачная попытка входа: ${parsed.data.login}`,
         userLogin: parsed.data.login,
-        ipAddress: ip,
+        ...logClient,
       }, request.log)
       return reply.status(401).send({
         success: false,
@@ -102,7 +115,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
       userId: user.id,
       userLogin: user.login,
       userName: user.name,
-      ipAddress: ip,
+      ...logClient,
     }, request.log)
 
     return {
@@ -152,7 +165,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
 
     const fields = mapCrmUserToLocalFields(payload)
     const user = upsertUserFromCrm(fields)
-    const ip = getRequestIp(request)
+    const logClient = activityClientFromRequest(request)
     const { token, user: publicProfile } = await signInLocalUser(user, reply)
 
     logActivity(app.config.env, {
@@ -163,7 +176,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
       userId: user.id,
       userLogin: user.login,
       userName: user.name,
-      ipAddress: ip,
+      ...logClient,
     }, request.log)
 
     return { success: true, token, user: publicProfile }
@@ -186,6 +199,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
     }
     const fields = mapCrmUserToLocalFields(crmUser)
     const user = upsertUserFromCrm(fields)
+    const logClient = activityClientFromRequest(request, parsed.data.clientHostname)
     const { token, user: publicProfile } = await signInLocalUser(user, reply)
 
     logActivity(app.config.env, {
@@ -196,7 +210,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
       userId: user.id,
       userLogin: user.login,
       userName: user.name,
-      ipAddress: getRequestIp(request),
+      ...logClient,
     }, request.log)
 
     return { success: true, token, user: publicProfile }
