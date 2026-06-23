@@ -10,6 +10,7 @@ import type {
 import {
   ensureScheduleRowDetailMeta,
   findScheduleBlockIdByDate,
+  scheduleParticipantKey,
 } from '../utils/schedule'
 import { ensureSubstituteGroup, isScheduleSubstituteSlug } from '../config/schedule'
 
@@ -29,20 +30,35 @@ export function crmParticipantToSchedule(p: ApiCrmParticipant): ScheduleParticip
   }
 }
 
+function resolveApiCreator(event: ApiEvent): ScheduleParticipant | undefined {
+  const raw = event.creator
+  if (raw)
+    return crmParticipantToSchedule(raw)
+  return undefined
+}
+
+function participantsWithoutCreator(
+  event: ApiEvent,
+  creator?: ScheduleParticipant,
+): ScheduleParticipant[] {
+  const creatorKey = creator ? scheduleParticipantKey(creator) : null
+  return (event.participants ?? [])
+    .map(crmParticipantToSchedule)
+    .filter(p => scheduleParticipantKey(p) !== creatorKey)
+}
+
 export function apiEventToScheduleRow(event: ApiEvent): ScheduleRow {
-  const participants = (event.participants ?? []).map(crmParticipantToSchedule)
-  const organizer = event.organizer
-    ? crmParticipantToSchedule(event.organizer)
-    : undefined
+  const creator = resolveApiCreator(event)
+  const participants = participantsWithoutCreator(event, creator)
 
   const detailFromApi = (event.detail ?? {}) as Record<string, unknown>
-  const { createdAt: _ignored, ...detailRest } = detailFromApi
+  const { createdAt: _ignored, organizer: _legacyOrganizer, ...detailRest } = detailFromApi
 
   const detail: NonNullable<ScheduleRow['detail']> = {
     ...detailRest,
     date: event.eventDate,
     allDay: event.allDay,
-    organizer,
+    creator,
   }
 
   if (event.createdAt?.trim())
@@ -102,17 +118,23 @@ export function scheduleRowToApiPayload(
   row: ScheduleRow,
   substituteSlug: ScheduleSubstituteSlug,
   eventDate: string,
+  options?: { isCreate?: boolean },
 ) {
   const participantIds = row.participants
     .map(p => p.externalId)
     .filter((id): id is number => typeof id === 'number' && id > 0)
 
-  const organizerId = row.detail?.organizer?.externalId ?? null
-  const organizerExternalId = organizerId != null && participantIds.includes(organizerId)
-    ? organizerId
+  const detailRaw = row.detail ?? null
+  const detailForApi = detailRaw
+    ? (() => {
+        const copy = { ...detailRaw } as Record<string, unknown>
+        delete copy.creator
+        delete copy.organizer
+        return Object.keys(copy).length ? copy : null
+      })()
     : null
 
-  return {
+  const payload: Record<string, unknown> = {
     substituteSlug,
     eventDate,
     time: row.detail?.allDay ? '' : row.time,
@@ -122,11 +144,16 @@ export function scheduleRowToApiPayload(
     topic: row.topic,
     hidden: Boolean(row.hidden),
     completed: Boolean(row.detail?.completed),
-    organizerExternalId,
     attachmentsLabel: row.attachmentsLabel,
-    detail: row.detail ?? null,
+    detail: detailForApi,
     participantIds,
   }
+
+  if (options?.isCreate) {
+    payload.creatorExternalId = row.detail?.creator?.externalId ?? null
+  }
+
+  return payload
 }
 
 export type ScheduleSelection = {

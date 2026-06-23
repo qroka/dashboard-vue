@@ -5,7 +5,7 @@ import { shouldRedactHiddenEvent } from '../services/event-permissions.js'
 
 export type EnrichedEvent = EventRecord & {
   participants?: CrmParticipant[]
-  organizer?: CrmParticipant | null
+  creator?: CrmParticipant | null
   viewRestricted?: boolean
 }
 
@@ -29,7 +29,7 @@ export function applyEventVisibilityForProfile(
     attachmentsLabel: 'Нет файлов',
     attachments: [],
     participants: [],
-    organizer: null,
+    creator: null,
     detail,
     viewRestricted: true,
   }

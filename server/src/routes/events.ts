@@ -41,6 +41,8 @@ const createEventSchema = z.object({
   hidden: z.boolean().optional(),
   completed: z.boolean().optional(),
   createdAt: z.string().optional(),
+  creatorExternalId: z.number().int().positive().nullable().optional(),
+  /** @deprecated используйте creatorExternalId */
   organizerExternalId: z.number().int().positive().nullable().optional(),
   detail: z.record(z.string(), z.unknown()).nullable().optional(),
   participantIds: z.array(z.number().int().positive()).optional(),
@@ -53,13 +55,24 @@ const listQuerySchema = z.object({
 
 type EventRecord = NonNullable<ReturnType<typeof findEventById>>
 
+function resolveCreatorExternalId(data: {
+  creatorExternalId?: number | null
+  organizerExternalId?: number | null
+}): number | null | undefined {
+  if (data.creatorExternalId !== undefined)
+    return data.creatorExternalId
+  if (data.organizerExternalId !== undefined)
+    return data.organizerExternalId
+  return undefined
+}
+
 function collectExternalIds(events: EventRecord[]): number[] {
   const ids = new Set<number>()
   for (const event of events) {
     for (const id of event.participantIds)
       ids.add(id)
-    if (event.organizerExternalId)
-      ids.add(event.organizerExternalId)
+    if (event.creatorExternalId)
+      ids.add(event.creatorExternalId)
   }
   return [...ids]
 }
@@ -68,15 +81,17 @@ function enrichWithMap(
   event: EventRecord,
   byId: Map<number, CrmParticipant>,
 ): EnrichedEvent {
+  const creatorId = event.creatorExternalId
   const participants = event.participantIds
+    .filter(id => id !== creatorId)
     .map(id => byId.get(id))
     .filter((p): p is CrmParticipant => p != null)
 
   return {
     ...event,
     participants,
-    organizer: event.organizerExternalId
-      ? byId.get(event.organizerExternalId) ?? null
+    creator: creatorId
+      ? byId.get(creatorId) ?? null
       : null,
   }
 }
@@ -88,7 +103,7 @@ async function enrichEvent(
 ) {
   const ids = [
     ...event.participantIds,
-    ...(event.organizerExternalId ? [event.organizerExternalId] : []),
+    ...(event.creatorExternalId ? [event.creatorExternalId] : []),
   ]
   const participants = await crm.getByIds(ids)
   const byId = new Map(participants.map(p => [p.id, p]))
@@ -185,7 +200,11 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         return reply.status(403).send({ success: false, error: 'Forbidden' })
       }
 
-      const event = createEvent(parsed.data)
+      const event = createEvent({
+        ...parsed.data,
+        creatorExternalId:
+          resolveCreatorExternalId(parsed.data) ?? profile.externalUserId ?? null,
+      })
       const actor = jwtActor(request)
       const logCtx = await resolveEventLogContext(event, crm)
       const createLog = buildEventCreateLog(event, logCtx)
@@ -247,7 +266,8 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         return reply.status(403).send({ success: false, error: 'Forbidden' })
       }
 
-      const event = updateEvent(id, parsed.data)
+      const { creatorExternalId: _c, organizerExternalId: _o, ...patchBody } = parsed.data
+      const event = updateEvent(id, patchBody)
       if (!event) {
         return reply.status(404).send({ success: false, error: 'Event not found' })
       }

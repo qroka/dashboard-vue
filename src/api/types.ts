@@ -45,13 +45,14 @@ export interface ApiEvent {
   hidden: boolean
   completed: boolean
   createdAt: string | null
-  organizerExternalId: number | null
+  creatorExternalId: number | null
   attachmentsLabel: string
   detail: Record<string, unknown> | null
   participantIds: number[]
   attachments: ApiEventAttachment[]
   participants?: ApiCrmParticipant[]
-  organizer?: ApiCrmParticipant | null
+  /** Создатель записи (кто создал мероприятие в графике). */
+  creator?: ApiCrmParticipant | null
   /** Исполнитель: скрытое мероприятие — в графике только время. */
   viewRestricted?: boolean
 }

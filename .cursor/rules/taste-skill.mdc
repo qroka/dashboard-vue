@@ -1,0 +1,46 @@
+---
+description: Taste Skill ([Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)) — UI/UX при доработке интерфейса grafic.admsr.ru
+globs:
+  - src/**/*.vue
+  - src/**/*.css
+  - src/assets/**
+alwaysApply: false
+---
+
+# Taste Skill в этом проекте
+
+Скиллы установлены из [taste-skill](https://github.com/Leonxlnx/taste-skill) в `.agents/skills/` (дубликат: `.cursor/skills/`). Обновление: `npx skills add https://github.com/Leonxlnx/taste-skill`.
+
+Перед правками UI **прочитай** подходящий `SKILL.md` целиком и следуй ему в рамках ограничений ниже.
+
+## Стек проекта (не ломать)
+
+- Vue 3 + Vite, **Nuxt UI 4**, Tailwind 4, `@vueuse/core`
+- Иконки: **Lucide** (`i-lucide-*`) — оставляем
+- Шрифт: **Public Sans** (`main.css`, `index.html`)
+- Тема: `appConfig.ui.colors`, SQLite `theme_*` у пользователя
+- Это **корпоративный график заместителей** (таблица, слайдовер, доска), не лендинг
+
+## Какой скилл когда
+
+| Задача | Скилл (папка в `.agents/skills/`) |
+|--------|-----------------------------------|
+| Улучшить существующие экраны, график, формы | `redesign-existing-projects` |
+| Спокойный «офисный» UI, иерархия, отступы | `minimalist-ui` (адаптировать: Lucide и Nuxt UI — ок) |
+| Новые маркетинговые/лендинг-страницы (если появятся) | `design-taste-frontend` |
+| Полный редизайн с референс-картинками | `image-to-code` |
+| Мокапы/референсы (картинки, не код) | `imagegen-frontend-web`, `imagegen-frontend-mobile`, `brandkit` |
+| Агент обрывает вывод | `full-output-enforcement` |
+
+**Не применять** `industrial-brutalist-ui` / агрессивный `gpt-taste` без явной просьбы пользователя.
+
+## Правила адаптации
+
+1. **Сохраняй** компоненты Nuxt UI (`UButton`, `UTable`, `USlideover`, …) — меняй классы, layout, типографику, не переписывай на сырой HTML без причины.
+2. **Минимальный diff** — taste skill для полировки, не для полной перестройки графика.
+3. Для графика (`SubstitutesScheduleView`, `ScheduleEventSlideover`): читаемость строк, плотность, состояния hover/focus, скрытые мероприятия — без «Awwwards»-анимаций.
+4. `design-taste-frontend` v2 в README исключает дашборды — для этого репо приоритет **`redesign-existing-projects`** + **`minimalist-ui`**.
+
+## Design Read (кратко, перед UI-задачей)
+
+Одна строка: *«Корпоративный график для госсектора, спокойный utilitarian-minimal, Nuxt UI + Public Sans, без маркетингового slop»* — затем правки.

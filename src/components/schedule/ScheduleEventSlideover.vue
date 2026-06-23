@@ -204,11 +204,12 @@ const headerCreatedAt = computed(() => {
 })
 
 const headerCreatorParticipant = computed((): ScheduleParticipant | null => {
-  if (d.value?.organizer)
-    return d.value.organizer
+  if (d.value?.creator)
+    return d.value.creator
   if (isCreate.value && authUser.value?.name?.trim()) {
     const name = authUser.value.name.trim()
     return {
+      externalId: authUser.value.externalUserId ?? undefined,
       name,
       avatarSrc: figmaScheduleAssets.avatar,
       card: {
@@ -248,22 +249,16 @@ function applyDraftToRow() {
   r.participants = [...selectedParticipants.value]
   if (!r.detail)
     r.detail = {}
-  if (r.detail.organizer) {
-    const orgKey = scheduleParticipantKey(r.detail.organizer)
-    const orgId = r.detail.organizer.externalId
-    const organizerStillSelected = selectedParticipantKeys.value.includes(orgKey)
-      || (orgId != null && selectedParticipants.value.some(p => p.externalId === orgId))
-    if (!organizerStillSelected)
-      delete r.detail.organizer
+  if (isCreate.value) {
+    const creator = headerCreatorParticipant.value
+    if (creator)
+      r.detail.creator = creator
   }
   r.detail.date = draft.date
   r.detail.allDay = draft.allDay
   if (!r.apiId && !r.detail.createdAt && !isCreate.value) {
     const eventDate = draft.date || parseDateFromScheduleBlockTitle(s.block.title) || ''
     ensureScheduleRowDetailMeta(r, eventDate)
-  }
-  if (isCreate.value && selectedParticipants.value[0]?.externalId != null) {
-    r.detail.organizer = selectedParticipants.value[0]
   }
   r.hidden = draft.hidden
   r.attachmentFiles = attachmentItems.value.map(item => ({ ...item }))

@@ -7,7 +7,7 @@ const props = defineProps<{
   participant: ScheduleParticipant
   /** `header` — шапка слайдовера; `field` — форма; `table` — ячейка графика. */
   variant?: 'header' | 'field' | 'table'
-  /** Организатор в шапке (a11y). */
+  /** Создатель в шапке (a11y). */
   isCreator?: boolean
   /** Без карточки и клика (режим только просмотра). */
   disabled?: boolean
@@ -114,7 +114,7 @@ const displayName = computed(() =>
       color="neutral"
       :variant="variant === 'table' ? 'ghost' : 'soft'"
       size="xs"
-      :aria-label="isCreator ? 'Организатор мероприятия. Открыть карточку контакта' : undefined"
+      :aria-label="isCreator ? 'Создатель мероприятия. Открыть карточку контакта' : undefined"
       :class="variant === 'header'
         ? 'gap-1 rounded-md px-2 py-1 text-xs font-medium text-default'
         : 'gap-1.5 rounded-md px-2.5 py-1.5'"

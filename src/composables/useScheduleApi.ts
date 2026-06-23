@@ -91,7 +91,9 @@ export function useScheduleApi() {
     if (!eventDate)
       throw new Error('Не указана дата мероприятия')
 
-    const payload = scheduleRowToApiPayload(row, group.substituteKey, eventDate)
+    const payload = scheduleRowToApiPayload(row, group.substituteKey, eventDate, {
+      isCreate: isCreate || !row.apiId,
+    })
     const attachmentsToSync = [...row.attachmentFiles]
     assertUploadFilesValid(pendingUploadFiles(attachmentsToSync))
 

@@ -2,22 +2,22 @@ import type { EventRecord } from '../types/events.js'
 import type { UserAccessProfile, UserRole } from '../types/auth.js'
 import { isScheduleSubstituteSlug } from '../constants/schedule-slugs.js'
 
-/** Участник или организатор мероприятия (CRM u_id). */
+/** Участник или создатель мероприятия (CRM u_id). */
 export function isEventParticipant(
   profile: UserAccessProfile,
-  event: Pick<EventRecord, 'participantIds' | 'organizerExternalId'>,
+  event: Pick<EventRecord, 'participantIds' | 'creatorExternalId'>,
 ): boolean {
   if (profile.externalUserId == null)
     return false
   const id = profile.externalUserId
   if (event.participantIds.includes(id))
     return true
-  return event.organizerExternalId === id
+  return event.creatorExternalId === id
 }
 
 export function canViewEvent(
   profile: UserAccessProfile,
-  event: Pick<EventRecord, 'hidden' | 'participantIds' | 'organizerExternalId' | 'substituteSlug'>,
+  event: Pick<EventRecord, 'hidden' | 'participantIds' | 'creatorExternalId' | 'substituteSlug'>,
 ): boolean {
   if (profile.role === 'admin')
     return true
@@ -32,7 +32,7 @@ export function canViewEvent(
 /** Скрытое мероприятие без доступа к деталям: в графике только время и плашка. */
 export function shouldRedactHiddenEvent(
   profile: UserAccessProfile,
-  event: Pick<EventRecord, 'hidden' | 'substituteSlug' | 'participantIds' | 'organizerExternalId'>,
+  event: Pick<EventRecord, 'hidden' | 'substituteSlug' | 'participantIds' | 'creatorExternalId'>,
 ): boolean {
   if (!event.hidden)
     return false

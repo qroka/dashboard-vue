@@ -59,7 +59,7 @@ function mapEvent(row: EventRow): EventRecord {
     hidden: row.hidden === 1,
     completed: row.completed === 1,
     createdAt: row.created_at,
-    organizerExternalId: row.organizer_external_id,
+    creatorExternalId: row.organizer_external_id,
     attachmentsLabel: row.attachments_label,
     detail: parseDetail(row.detail_json),
     participantIds: loadParticipantIds(row.id),
@@ -142,7 +142,7 @@ export function createEvent(input: CreateEventInput): EventRecord {
       input.hidden ? 1 : 0,
       input.completed ? 1 : 0,
       input.createdAt ?? new Date().toISOString(),
-      input.organizerExternalId ?? null,
+      input.creatorExternalId ?? null,
       'Нет файлов',
       input.detail ? JSON.stringify(input.detail) : null,
     )
@@ -186,9 +186,7 @@ export function updateEvent(id: number, input: UpdateEventInput): EventRecord | 
     (input.hidden ?? existing.hidden) ? 1 : 0,
     (input.completed ?? existing.completed) ? 1 : 0,
     input.createdAt ?? existing.createdAt,
-    input.organizerExternalId !== undefined
-      ? input.organizerExternalId
-      : existing.organizerExternalId,
+    existing.creatorExternalId,
     input.detail !== undefined
       ? (input.detail ? JSON.stringify(input.detail) : null)
       : (existing.detail ? JSON.stringify(existing.detail) : null),

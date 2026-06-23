@@ -297,9 +297,9 @@ export function collectScheduleParticipants(blocks: ScheduleDateBlock[]): Schedu
       for (const row of group.rows) {
         for (const participant of row.participants)
           byKey.set(scheduleParticipantKey(participant), participant)
-        const organizer = row.detail?.organizer
-        if (organizer)
-          byKey.set(scheduleParticipantKey(organizer), organizer)
+        const creator = row.detail?.creator
+        if (creator)
+          byKey.set(scheduleParticipantKey(creator), creator)
       }
     }
   }
@@ -323,7 +323,7 @@ export function scheduleRowMatchesFilters(
       row.attachmentsLabel,
       ...row.attachmentFiles.map(f => f.name),
       ...row.participants.map(p => p.name),
-      row.detail?.organizer?.name
+      row.detail?.creator?.name,
     ]
       .filter(Boolean)
       .join(' ')
@@ -334,10 +334,10 @@ export function scheduleRowMatchesFilters(
 
   if (participantKeys.length > 0) {
     const rowParticipantKeys = new Set(
-      row.participants.map(scheduleParticipantKey)
+      row.participants.map(scheduleParticipantKey),
     )
-    if (row.detail?.organizer)
-      rowParticipantKeys.add(scheduleParticipantKey(row.detail.organizer))
+    if (row.detail?.creator)
+      rowParticipantKeys.add(scheduleParticipantKey(row.detail.creator))
     if (!participantKeys.some(key => rowParticipantKeys.has(key)))
       return false
   }

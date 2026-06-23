@@ -29,7 +29,8 @@ export interface ScheduleRowDetail {
   allDay?: boolean
   createdAt?: string
   headerDateTime?: string
-  organizer?: ScheduleParticipant
+  /** Создатель мероприятия (не участник). */
+  creator?: ScheduleParticipant
 }
 
 export interface ScheduleRow {

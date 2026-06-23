@@ -18,7 +18,8 @@ export interface EventRecord {
   hidden: boolean
   completed: boolean
   createdAt: string | null
-  organizerExternalId: number | null
+  /** CRM id создателя (колонка SQLite organizer_external_id). Не меняется после создания. */
+  creatorExternalId: number | null
   attachmentsLabel: string
   detail: Record<string, unknown> | null
   participantIds: number[]
@@ -36,7 +37,7 @@ export interface CreateEventInput {
   hidden?: boolean
   completed?: boolean
   createdAt?: string
-  organizerExternalId?: number | null
+  creatorExternalId?: number | null
   detail?: Record<string, unknown> | null
   participantIds?: number[]
 }
