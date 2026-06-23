@@ -53,7 +53,7 @@ function activityClientFromRequest(
   bodyHostname?: string | null,
 ) {
   const client = getRequestLogClient(request)
-  const hostname = client.clientHostname ?? bodyHostname?.trim() || undefined
+  const hostname = client.clientHostname ?? (bodyHostname?.trim() || undefined)
   return {
     ipAddress: client.ipAddress,
     clientHostname: hostname,
