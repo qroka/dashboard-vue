@@ -52,6 +52,10 @@ const isEventEntity = computed(() =>
   props.entry.entityType === 'event' && props.entry.entityId != null,
 )
 
+const eventBadgeLabel = computed(() =>
+  props.entry.entityId != null ? `event ${props.entry.entityId}` : '',
+)
+
 const hasDetails = computed(() => activityLogHasEventDetails(props.entry)
   || Boolean(meta.value?.files?.length)
   || props.entry.entityId != null)
@@ -110,39 +114,48 @@ function openEvent() {
           </p>
         </button>
 
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
-          <span class="inline-flex items-center gap-1">
-            <UIcon name="i-lucide-user" class="size-3.5 shrink-0" />
-            <ScheduleParticipantPopoverChip
-              v-if="actorParticipant"
-              variant="table"
-              :participant="actorParticipant"
-              @click.stop
-            />
-            <span v-else-if="isSystemActor">Система</span>
-            <span v-else>
-              {{ entry.userName?.trim() || entry.userLogin?.trim() }}
-            </span>
-          </span>
+        <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+          <ScheduleParticipantPopoverChip
+            v-if="actorParticipant"
+            variant="log"
+            :participant="actorParticipant"
+            @click.stop
+          />
+          <UBadge
+            v-else-if="isSystemActor"
+            color="neutral"
+            variant="subtle"
+            size="xs"
+            label="Система"
+          />
+          <UBadge
+            v-else
+            color="neutral"
+            variant="subtle"
+            size="xs"
+            :label="entry.userName?.trim() || entry.userLogin?.trim() || '—'"
+          />
           <span v-if="entry.ipAddress" class="inline-flex items-center gap-1 tabular-nums">
             <UIcon name="i-lucide-globe" class="size-3.5 shrink-0" />
             {{ entry.ipAddress }}
           </span>
-          <span v-if="entry.entityId != null" class="inline-flex items-center gap-1">
-            <UIcon name="i-lucide-hash" class="size-3.5 shrink-0" />
-            <UButton
-              v-if="isEventEntity"
-              variant="link"
-              color="primary"
-              size="xs"
-              class="h-auto p-0 font-normal"
-              :label="`${entry.entityType} #${entry.entityId}`"
-              @click.stop="openEvent"
-            />
-            <span v-else>
-              {{ entry.entityType ?? 'запись' }} #{{ entry.entityId }}
-            </span>
-          </span>
+          <UButton
+            v-if="isEventEntity"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="h-auto rounded-md px-2 py-0.5 text-xs font-medium"
+            :label="eventBadgeLabel"
+            :aria-label="`Открыть мероприятие ${entry.entityId}`"
+            @click.stop="openEvent"
+          />
+          <UBadge
+            v-else-if="entry.entityId != null"
+            color="neutral"
+            variant="subtle"
+            size="xs"
+            :label="`${entry.entityType ?? 'запись'} ${entry.entityId}`"
+          />
         </div>
       </div>
 

@@ -682,7 +682,7 @@ function cancelDeleteEvent() {
                 <template v-for="c in col.cards" :key="c.cardKey">
                   <div
                     :class="[
-                      'group rounded-xl border border-default bg-default p-3.5 shadow-xs transition-[box-shadow,transform,background-color,border-color]',
+                      'group rounded-r-xl border border-default bg-default p-3.5 shadow-xs transition-[box-shadow,transform,background-color,border-color]',
                       accentCardBorder(c.group.accent),
                       isScheduleGeneralView && accentSurfaceClass(c.group.accent),
                       'cursor-pointer hover:-translate-y-px hover:border-primary/20 hover:bg-elevated/25 hover:shadow-sm',

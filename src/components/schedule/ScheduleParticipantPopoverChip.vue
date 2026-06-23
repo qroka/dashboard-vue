@@ -5,8 +5,8 @@ import { formatParticipantShortName } from '../../utils/schedule'
 
 const props = defineProps<{
   participant: ScheduleParticipant
-  /** `header` — шапка слайдовера; `field` — форма; `table` — ячейка графика. */
-  variant?: 'header' | 'field' | 'table'
+  /** `header` — шапка слайдовера; `field` — форма; `table` — ячейка графика; `log` — журнал. */
+  variant?: 'header' | 'field' | 'table' | 'log'
   /** Создатель в шапке (a11y). */
   isCreator?: boolean
   /** Без карточки и клика (режим только просмотра). */
@@ -20,7 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const displayName = computed(() =>
-  props.variant === 'table'
+  props.variant === 'table' || props.variant === 'log'
     ? formatParticipantShortName(props.participant.name)
     : props.participant.name,
 )
@@ -112,18 +112,26 @@ const displayName = computed(() =>
   >
     <UButton
       color="neutral"
-      :variant="variant === 'table' ? 'ghost' : 'soft'"
+      :variant="variant === 'table' || variant === 'log' ? 'ghost' : 'soft'"
       size="xs"
       :aria-label="isCreator ? 'Создатель мероприятия. Открыть карточку контакта' : undefined"
       :class="variant === 'header'
         ? 'gap-1 rounded-md px-2 py-1 text-xs font-medium text-default'
-        : 'gap-1.5 rounded-md px-2.5 py-1.5'"
+        : variant === 'log'
+          ? 'gap-1 rounded-md px-2 py-0.5'
+          : 'gap-1.5 rounded-md px-2.5 py-1.5'"
       @click.stop
     >
       <UAvatar
         v-if="variant === 'table'"
         :src="participant.avatarSrc"
         size="xs"
+        class="shrink-0"
+      />
+      <UAvatar
+        v-else-if="variant === 'log'"
+        :src="participant.avatarSrc"
+        size="2xs"
         class="shrink-0"
       />
       <UAvatar
@@ -136,7 +144,9 @@ const displayName = computed(() =>
           ? ''
           : variant === 'table'
             ? 'text-sm font-medium'
-            : 'text-xs font-medium'"
+            : variant === 'log'
+              ? 'text-xs font-medium'
+              : 'text-xs font-medium'"
       >{{ displayName }}</span>
     </UButton>
     <template #content>
