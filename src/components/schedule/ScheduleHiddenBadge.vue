@@ -1,10 +1,11 @@
 <script setup lang="ts">
 withDefaults(defineProps<{
   /**
-   * `icon` — компактно у темы (кто видит детали скрытого мероприятия).
-   * `badge` — текстовый бейдж в шапке слайдовера.
+   * `icon` — компактная иконка у темы (доска).
+   * `table` — бейдж с текстом в таблице.
+   * `badge` — короткий бейдж в шапке слайдовера.
    */
-  variant?: 'icon' | 'badge'
+  variant?: 'icon' | 'table' | 'badge'
 }>(), {
   variant: 'icon',
 })
@@ -16,7 +17,7 @@ withDefaults(defineProps<{
     text="Скрытое мероприятие — не отображается для всех пользователей"
   >
     <span
-      class="inline-flex shrink-0 items-center justify-center rounded-md bg-elevated p-0.5 text-muted ring ring-inset ring-default transition-colors hover:bg-accented hover:text-default"
+      class="inline-flex shrink-0 items-center justify-center rounded-md bg-primary/10 p-0.5 text-primary ring ring-inset ring-primary/20 transition-colors hover:bg-primary/15"
       role="img"
       aria-label="Скрытое мероприятие"
       tabindex="0"
@@ -30,8 +31,18 @@ withDefaults(defineProps<{
     </span>
   </UTooltip>
   <UBadge
+    v-else-if="variant === 'table'"
+    color="primary"
+    variant="subtle"
+    size="md"
+    icon="i-lucide-eye-off"
+    label="Скрытое мероприятие"
+    class="shrink-0 whitespace-nowrap"
+    @click.stop
+  />
+  <UBadge
     v-else
-    color="neutral"
+    color="primary"
     variant="subtle"
     size="sm"
     icon="i-lucide-eye-off"

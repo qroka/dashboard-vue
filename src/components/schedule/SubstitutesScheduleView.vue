@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useLocalStorage } from '@vueuse/core'
 import { useHead } from '@unhead/vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { DropdownMenuItem } from '@nuxt/ui'
@@ -63,7 +64,7 @@ const { loadBlocks, saveEvent, deleteEvent, loading: scheduleLoading, error: sch
 const { participants: crmParticipants, load: loadParticipants } = useParticipants()
 const { canEditSchedule, canEditSubstituteSlug } = usePermissions()
 
-const view = ref<'list' | 'board'>('list')
+const view = useLocalStorage<'list' | 'board'>('grafic.schedule.view', 'list')
 
 const scheduleBlocks = ref<ScheduleDateBlock[]>([])
 
@@ -844,16 +845,13 @@ function cancelDeleteEvent() {
                           <span class="min-w-0 whitespace-normal wrap-break-word">{{ formatSchedulePlace(entry.row) }}</span>
                         </div>
                         <div
-                          class="flex min-h-[100px] flex-col justify-center gap-1.5 border-r border-default p-4 text-sm leading-5 text-default"
+                          class="flex min-h-[100px] flex-col justify-center gap-2 border-r border-default p-4 text-sm leading-5 text-default"
                         >
-                          <span class="inline-flex min-w-0 items-start gap-2">
-                            <ScheduleHiddenBadge
-                              v-if="entry.row.hidden"
-                              variant="icon"
-                              class="mt-0.5 shrink-0"
-                            />
-                            <span class="min-w-0 whitespace-normal wrap-break-word">{{ entry.row.topic }}</span>
-                          </span>
+                          <ScheduleHiddenBadge
+                            v-if="entry.row.hidden && !isScheduleRowViewRestricted(entry.row)"
+                            variant="table"
+                          />
+                          <span class="min-w-0 whitespace-normal wrap-break-word">{{ entry.row.topic }}</span>
                         </div>
                         <div
                           class="flex min-h-[100px] flex-wrap content-center items-center gap-3 border-r border-default p-4"
