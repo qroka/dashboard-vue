@@ -1,5 +1,4 @@
 import type { FastifyPluginAsync } from 'fastify'
-import rateLimit from '@fastify/rate-limit'
 import { z } from 'zod'
 import {
   verifyCredentials,
@@ -49,32 +48,7 @@ function toJwtPayload(user: LocalUser): AuthUserPayload {
 }
 
 export const authRoutes: FastifyPluginAsync = async app => {
-  await app.register(rateLimit, {
-    global: false,
-    errorResponseBuilder: () => ({
-      success: false,
-      error: 'Слишком много попыток входа. Повторите позже.',
-    }),
-  })
-
-  app.post('/auth/login', {
-    config: {
-      rateLimit: {
-        max: 10,
-        timeWindow: '15 minutes',
-        onExceeded: (request) => {
-          const ip = getRequestIp(request)
-          logActivity(app.config.env, {
-            level: 'warning',
-            category: 'auth',
-            action: 'auth.login_rate_limited',
-            message: 'Превышен лимит попыток входа',
-            ipAddress: ip,
-          }, request.log)
-        },
-      },
-    },
-  }, async (request, reply) => {
+  app.post('/auth/login', async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({
@@ -196,11 +170,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
   })
 
   /** Проверка логина/пароля CRM (crm_lookup.php) и выдача JWT. */
-  app.post('/auth/crm-bridge', {
-    config: {
-      rateLimit: { max: 10, timeWindow: '15 minutes' },
-    },
-  }, async (request, reply) => {
+  app.post('/auth/crm-bridge', async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({ success: false, error: 'Invalid request body' })
