@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ScheduleParticipant } from '../../types/schedule'
-import { scheduleParticipantKey } from '../../utils/schedule'
+import { scheduleParticipantKey, personAvatarChip } from '../../utils/schedule'
 import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue'
 
 const selectedParticipantKeys = defineModel<string[]>({ default: () => [] })
@@ -22,7 +22,7 @@ const participantSelectItems = computed(() =>
   props.availableParticipants.map(participant => ({
     label: participant.name,
     value: scheduleParticipantKey(participant),
-    avatar: { src: participant.avatarSrc, alt: participant.name },
+    avatar: personAvatarChip(participant.name),
   })),
 )
 

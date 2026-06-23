@@ -27,7 +27,6 @@ import {
   downloadEventAttachment,
   previewEventAttachment,
 } from '../../api/attachments'
-import { figmaScheduleAssets } from '../../config/figma-mcp-assets'
 import { UPLOAD_MAX_SIZE_LABEL, validateUploadFile } from '../../config/uploads'
 import { useAuth } from '../../composables/useAuth'
 import ScheduleAttachmentList from './ScheduleAttachmentList.vue'
@@ -215,7 +214,7 @@ const headerCreatorParticipant = computed((): ScheduleParticipant | null => {
     return {
       externalId: authUser.value.externalUserId ?? undefined,
       name,
-      avatarSrc: figmaScheduleAssets.avatar,
+      avatarSrc: '',
       card: {
         line1: name,
         line2: '',

@@ -30,7 +30,7 @@ import {
   ensureSubstituteGroup,
   formatSchedulePlace,
   formatScheduleRowTime,
-  formatParticipantInitials,
+  personAvatarChip,
   isScheduleRowAllDay,
   isScheduleRowViewRestricted,
   buildScheduleDayBlockHeading,
@@ -44,6 +44,7 @@ import ScheduleEventSlideover from './ScheduleEventSlideover.vue'
 import ScheduleHiddenBadge from './ScheduleHiddenBadge.vue'
 import ScheduleHiddenEventLabel from './ScheduleHiddenEventLabel.vue'
 import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue'
+import PersonAvatar from '../PersonAvatar.vue'
 
 /** Карточка на доске: столбец = день (`ScheduleDateBlock`). */
 interface ScheduleBoardCard {
@@ -114,7 +115,7 @@ const participantSelectItems = computed(() =>
   scheduleParticipants.value.map((p: ScheduleParticipant) => ({
     label: p.name,
     value: scheduleParticipantKey(p),
-    avatar: { src: p.avatarSrc, alt: p.name }
+    avatar: personAvatarChip(p.name)
   })))
 
 const filteredBlocks = computed(() =>
@@ -611,7 +612,7 @@ function cancelDeleteEvent() {
         </UEmpty>
 
         <div v-else-if="view === 'board'" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <div class="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden p-px sm:gap-4">
+          <div class="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden p-px pb-2 sm:gap-4">
             <div
               v-for="col in boardColumns"
               :key="col.block.id"
@@ -646,7 +647,7 @@ function cancelDeleteEvent() {
                 />
               </div>
 
-              <div v-if="canCreateEvents" class="shrink-0 px-3 pt-3 sm:px-3.5">
+              <div v-if="canCreateEvents" class="shrink-0 px-3 pt-3 mb-3 sm:px-3.5">
                 <UButton
                   block
                   size="sm"
@@ -659,7 +660,7 @@ function cancelDeleteEvent() {
                 />
               </div>
 
-              <div class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3 sm:p-3.5">
+              <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
                 <UEmpty
                   v-if="!col.cards.length"
                   size="sm"
@@ -672,8 +673,8 @@ function cancelDeleteEvent() {
                 <template v-for="c in col.cards" :key="c.cardKey">
                   <div
                     :class="[
-                      'group rounded-xl border border-default bg-default p-3.5 shadow-xs transition-[box-shadow,transform,background-color,border-color]',
-                      isScheduleGeneralView && accentSurfaceClass(c.group.accent),
+                      'group border-y border-default p-3.5 py-2',
+                      accentSurfaceClass(c.group.accent),
                       'cursor-pointer hover:-translate-y-px hover:border-primary/20 hover:bg-elevated/40 hover:shadow-sm',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     ]"
@@ -722,7 +723,7 @@ function cancelDeleteEvent() {
 
                     <div
                       v-if="isScheduleGeneralView"
-                      class="mb-2.5 flex min-w-0 items-center gap-2 rounded-lg bg-elevated/60 px-2 py-1.5"
+                      class="mb-2.5 flex min-w-0 items-center gap-2"
                     >
                       <UAvatar :src="c.group.avatarSrc" size="2xs" class="shrink-0" />
                       <span class="truncate text-xs font-medium text-default">{{ c.group.name }}</span>
@@ -758,14 +759,13 @@ function cancelDeleteEvent() {
                         class="mt-3 flex items-center justify-between gap-2 border-t border-default/80 pt-2.5"
                       >
                         <div v-if="c.row.participants.length" class="flex min-w-0 flex-wrap items-center gap-1">
-                          <span
+                          <PersonAvatar
                             v-for="(p, pi) in c.row.participants.slice(0, 4)"
                             :key="pi"
-                            class="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-elevated text-[10px] font-semibold leading-none text-default ring-1 ring-default"
+                            :name="p.name"
+                            size="2xs"
                             :title="p.name"
-                          >
-                            {{ formatParticipantInitials(p.name) }}
-                          </span>
+                          />
                           <span
                             v-if="c.row.participants.length > 4"
                             class="shrink-0 text-xs text-dimmed tabular-nums"

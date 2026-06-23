@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { ScheduleParticipant } from '../../types/schedule'
 import { formatParticipantShortName } from '../../utils/schedule'
+import PersonAvatar from '../PersonAvatar.vue'
 
 const props = defineProps<{
   participant: ScheduleParticipant
@@ -24,6 +25,20 @@ const displayName = computed(() =>
     ? formatParticipantShortName(props.participant.name)
     : props.participant.name,
 )
+
+const avatarSize = computed(() => {
+  if (props.variant === 'table')
+    return 'xs' as const
+  if (props.variant === 'log')
+    return '2xs' as const
+  return 'xs' as const
+})
+
+const cardLine1 = computed(() => props.participant.card.line1?.trim() ?? '')
+const cardLine2 = computed(() => props.participant.card.line2?.trim() ?? '')
+const cardEmail = computed(() => props.participant.card.email?.trim() ?? '')
+const cardPhone = computed(() => props.participant.card.phone?.trim() ?? '')
+const cardAddress = computed(() => props.participant.card.address?.trim() ?? '')
 </script>
 
 <template>
@@ -39,17 +54,7 @@ const displayName = computed(() =>
     ]"
     aria-disabled="true"
   >
-    <UAvatar
-      v-if="variant === 'table'"
-      :src="participant.avatarSrc"
-      size="xs"
-      class="shrink-0"
-    />
-    <UAvatar
-      v-else
-      :src="participant.avatarSrc"
-      class="size-4 shrink-0"
-    />
+    <PersonAvatar :name="participant.name" :size="avatarSize" />
     <span>{{ displayName }}</span>
   </div>
   <div
@@ -67,29 +72,29 @@ const displayName = computed(() =>
         class="min-w-0 gap-1.5 rounded-none rounded-s-md px-2.5 py-1.5 pe-1.5"
         @click.stop
       >
-        <UAvatar :src="participant.avatarSrc" class="size-4 shrink-0" />
+        <PersonAvatar :name="participant.name" size="xs" />
         <span class="truncate text-xs font-medium">{{ participant.name }}</span>
       </UButton>
       <template #content>
         <div class="flex w-60 flex-col gap-2 rounded-md border border-default bg-default p-2">
           <div class="flex justify-center">
-            <UAvatar :src="participant.avatarSrc" class="size-[86px]" />
+            <PersonAvatar :name="participant.name" size="hero" />
           </div>
-          <div class="text-center text-base font-medium text-default">
-            <p>{{ participant.card.line1 }}</p>
-            <p>{{ participant.card.line2 }}</p>
+          <div v-if="cardLine1 || cardLine2" class="text-center text-base font-medium text-default">
+            <p v-if="cardLine1">{{ cardLine1 }}</p>
+            <p v-if="cardLine2">{{ cardLine2 }}</p>
           </div>
-          <div class="flex items-center gap-1.5 text-sm text-muted">
+          <div v-if="cardEmail" class="flex items-center gap-1.5 text-sm text-muted">
             <UIcon name="i-lucide-mail" class="size-5 shrink-0" />
-            {{ participant.card.email }}
+            {{ cardEmail }}
           </div>
-          <div class="flex items-center gap-1.5 text-sm text-muted">
+          <div v-if="cardPhone" class="flex items-center gap-1.5 text-sm text-muted">
             <UIcon name="i-lucide-phone" class="size-5 shrink-0" />
-            {{ participant.card.phone }}
+            {{ cardPhone }}
           </div>
-          <div class="flex items-center gap-1.5 text-sm text-muted">
+          <div v-if="cardAddress" class="flex items-center gap-1.5 text-sm text-muted">
             <UIcon name="i-lucide-map-pin" class="size-5 shrink-0" />
-            {{ participant.card.address }}
+            {{ cardAddress }}
           </div>
         </div>
       </template>
@@ -122,23 +127,7 @@ const displayName = computed(() =>
           : 'gap-1.5 rounded-md px-2.5 py-1.5'"
       @click.stop
     >
-      <UAvatar
-        v-if="variant === 'table'"
-        :src="participant.avatarSrc"
-        size="xs"
-        class="shrink-0"
-      />
-      <UAvatar
-        v-else-if="variant === 'log'"
-        :src="participant.avatarSrc"
-        size="2xs"
-        class="shrink-0"
-      />
-      <UAvatar
-        v-else
-        :src="participant.avatarSrc"
-        class="size-4 shrink-0"
-      />
+      <PersonAvatar :name="participant.name" :size="avatarSize" />
       <span
         :class="variant === 'header'
           ? ''
@@ -152,23 +141,23 @@ const displayName = computed(() =>
     <template #content>
       <div class="flex w-60 flex-col gap-2 rounded-md border border-default bg-default p-2">
         <div class="flex justify-center">
-          <UAvatar :src="participant.avatarSrc" class="size-[86px]" />
+          <PersonAvatar :name="participant.name" size="hero" />
         </div>
-        <div class="text-center text-base font-medium text-default">
-          <p>{{ participant.card.line1 }}</p>
-          <p>{{ participant.card.line2 }}</p>
+        <div v-if="cardLine1 || cardLine2" class="text-center text-base font-medium text-default">
+          <p v-if="cardLine1">{{ cardLine1 }}</p>
+          <p v-if="cardLine2">{{ cardLine2 }}</p>
         </div>
-        <div class="flex items-center gap-1.5 text-sm text-muted">
+        <div v-if="cardEmail" class="flex items-center gap-1.5 text-sm text-muted">
           <UIcon name="i-lucide-mail" class="size-5 shrink-0" />
-          {{ participant.card.email }}
+          {{ cardEmail }}
         </div>
-        <div class="flex items-center gap-1.5 text-sm text-muted">
+        <div v-if="cardPhone" class="flex items-center gap-1.5 text-sm text-muted">
           <UIcon name="i-lucide-phone" class="size-5 shrink-0" />
-          {{ participant.card.phone }}
+          {{ cardPhone }}
         </div>
-        <div class="flex items-center gap-1.5 text-sm text-muted">
+        <div v-if="cardAddress" class="flex items-center gap-1.5 text-sm text-muted">
           <UIcon name="i-lucide-map-pin" class="size-5 shrink-0" />
-          {{ participant.card.address }}
+          {{ cardAddress }}
         </div>
       </div>
     </template>

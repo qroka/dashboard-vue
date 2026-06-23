@@ -75,9 +75,21 @@ function openEvent() {
   <UCard
     variant="subtle"
     class="shrink-0 overflow-hidden transition-colors hover:ring-primary/20"
-    :ui="{ body: 'p-0' }"
+    :ui="{ body: 'p-0 sm:p-0' }"
   >
-    <div class="flex w-full items-start gap-3 p-3">
+    <div
+      class="flex w-full items-start gap-3 px-4 py-3 transition-colors"
+      :class="[
+        hasDetails && 'cursor-pointer hover:bg-elevated/30',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40',
+      ]"
+      :role="hasDetails ? 'button' : undefined"
+      :tabindex="hasDetails ? 0 : undefined"
+      :aria-expanded="hasDetails ? expanded : undefined"
+      @click="toggleExpanded"
+      @keydown.enter.prevent="toggleExpanded"
+      @keydown.space.prevent="toggleExpanded"
+    >
       <div
         class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated ring ring-default"
       >
@@ -103,24 +115,18 @@ function openEvent() {
           </span>
         </div>
 
-        <button
-          type="button"
-          class="-mx-1 w-full rounded-md px-1 py-0.5 text-left transition-colors hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
-          :class="hasDetails ? 'cursor-pointer' : 'cursor-default'"
-          :aria-expanded="hasDetails ? expanded : undefined"
-          @click="toggleExpanded"
-        >
-          <p class="text-sm font-medium leading-snug text-highlighted">
-            {{ entry.message }}
-          </p>
-        </button>
+        <p class="text-sm font-medium leading-snug text-highlighted">
+          {{ entry.message }}
+        </p>
 
-        <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+        <div
+          class="flex flex-wrap items-center gap-2 text-xs text-muted"
+          @click.stop
+        >
           <ScheduleParticipantPopoverChip
             v-if="actorParticipant"
             variant="log"
             :participant="actorParticipant"
-            @click.stop
           />
           <UBadge
             v-else-if="isSystemActor"
@@ -160,22 +166,17 @@ function openEvent() {
         </div>
       </div>
 
-      <UButton
+      <UIcon
         v-if="hasDetails"
-        color="neutral"
-        variant="ghost"
-        square
-        size="xs"
-        class="mt-1 shrink-0"
-        :icon="expanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-        :aria-label="expanded ? 'Свернуть детали' : 'Развернуть детали'"
-        @click="toggleExpanded"
+        :name="expanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+        class="mt-1 size-4 shrink-0 text-dimmed"
+        aria-hidden="true"
       />
     </div>
 
     <div
       v-if="expanded && hasDetails"
-      class="border-t border-default bg-elevated/30 p-3"
+      class="border-t border-default bg-elevated/30 px-4 py-3"
     >
       <div v-if="meta?.fields?.length" class="mb-3 space-y-2">
         <p class="text-xs font-medium tracking-wide text-dimmed uppercase">

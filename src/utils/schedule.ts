@@ -193,6 +193,15 @@ export function formatParticipantInitials(name: string): string {
   return (parts[1]!.charAt(0) + parts[2]!.charAt(0)).toUpperCase()
 }
 
+/** Пропсы для UAvatar / UButton / USelectMenu — только инициалы, без фото. */
+export function personAvatarChip(name: string) {
+  const label = name.trim() || 'Пользователь'
+  return {
+    alt: label,
+    text: formatParticipantInitials(label),
+  }
+}
+
 export function formatAttachmentFileSize(bytes: number): string {
   if (bytes < 1024)
     return `${bytes} Б`

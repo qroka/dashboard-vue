@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useColorMode } from '@vueuse/core'
 import { useAuth } from '../composables/useAuth'
+import { personAvatarChip } from '../utils/schedule'
 
 defineProps<{
   collapsed?: boolean
@@ -22,10 +23,7 @@ const menuUser = computed(() => {
   const roleHint = user.value?.roleLabel
   return {
     name: roleHint ? `${name} · ${roleHint}` : name,
-    avatar: {
-      src: undefined as string | undefined,
-      alt: name,
-    },
+    avatar: personAvatarChip(name),
   }
 })
 

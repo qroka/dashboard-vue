@@ -1,4 +1,3 @@
-import { figmaScheduleAssets } from '../config/figma-mcp-assets'
 import type { ApiCrmParticipant, ApiEvent } from './types'
 import type {
   ScheduleDateBlock,
@@ -21,7 +20,7 @@ export function crmParticipantToSchedule(p: ApiCrmParticipant): ScheduleParticip
     externalId: p.id,
     login: p.login,
     name: p.name,
-    avatarSrc: p.avatar ?? figmaScheduleAssets.avatar,
+    avatarSrc: '',
     card: {
       line1: p.line1 ?? (parts.length > 1 ? parts.slice(0, -1).join(' ') : p.name),
       line2: p.line2 ?? (parts.length > 1 ? parts[parts.length - 1]! : ''),

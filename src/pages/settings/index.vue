@@ -2,6 +2,7 @@
 import * as z from 'zod'
 import { reactive, ref } from 'vue'
 import type { FormSubmitEvent } from '@nuxt/ui'
+import PersonAvatar from '../../components/PersonAvatar.vue'
 
 const fileRef = ref<HTMLInputElement>()
 
@@ -120,11 +121,7 @@ function onFileClick() {
         class="flex max-sm:flex-col justify-between sm:items-center gap-4"
       >
         <div class="flex flex-wrap items-center gap-3">
-          <UAvatar
-            :src="profile.avatar"
-            :alt="profile.name"
-            size="lg"
-          />
+          <PersonAvatar :name="profile.name ?? 'Пользователь'" size="lg" />
           <UButton
             label="Choose"
             color="neutral"

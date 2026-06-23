@@ -1,4 +1,3 @@
-import { figmaScheduleAssets } from '../config/figma-mcp-assets'
 import type {
   ActivityLogCategory,
   ActivityLogEntry,
@@ -132,7 +131,7 @@ export function buildFallbackLogActorParticipant(
   const parts = displayName.split(/\s+/)
   return {
     name: displayName,
-    avatarSrc: figmaScheduleAssets.avatar,
+    avatarSrc: '',
     login: entry.userLogin?.trim() || undefined,
     card: {
       line1: parts.length > 1 ? parts.slice(0, -1).join(' ') : displayName,
