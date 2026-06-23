@@ -37,7 +37,7 @@ withDefaults(defineProps<{
     size="md"
     icon="i-lucide-eye-off"
     label="Скрытое мероприятие"
-    class="shrink-0 whitespace-nowrap"
+    class="w-fit shrink-0 self-start whitespace-nowrap"
     @click.stop
   />
   <UBadge
