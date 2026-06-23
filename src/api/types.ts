@@ -1,4 +1,4 @@
-export type ApiUserRole = 'admin' | 'manager' | 'moderator' | 'user'
+export type ApiUserRole = 'admin' | 'manager' | 'moderator' | 'assistant' | 'user'
 
 export interface ApiUser {
   id: number
