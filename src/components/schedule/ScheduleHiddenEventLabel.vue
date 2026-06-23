@@ -12,7 +12,7 @@ withDefaults(defineProps<{
     :class="size === 'sm' ? 'text-xs' : 'text-sm'"
   >
     <UIcon
-      name="i-lucide-eye"
+      name="i-lucide-eye-off"
       class="shrink-0 text-dimmed"
       :class="size === 'sm' ? 'size-4' : 'size-5'"
       aria-hidden="true"

@@ -303,6 +303,7 @@ function onCancelEdit() {
           <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
             <ScheduleHiddenBadge
               v-if="selection.row.hidden && !viewRestricted"
+              variant="badge"
             />
             <span v-if="headerCreatedAt">{{ headerCreatedAt }}</span>
             <span

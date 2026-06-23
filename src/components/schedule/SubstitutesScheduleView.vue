@@ -592,9 +592,6 @@ function cancelDeleteEvent() {
                         class="text-xs text-dimmed"
                         :class="{ 'tabular-nums': !isScheduleRowAllDay(c.row) }"
                       >{{ formatScheduleRowTime(c.row) }}</span>
-                      <ScheduleHiddenBadge
-                        v-if="c.row.hidden && !isScheduleRowViewRestricted(c.row)"
-                      />
                       <div class="ms-auto shrink-0" @click.stop>
                         <UDropdownMenu
                           v-if="rowContextMenuItems(c.block, c.group, c.row).length"
@@ -618,7 +615,14 @@ function cancelDeleteEvent() {
                     />
                     <template v-else>
                       <p class="line-clamp-4 text-sm font-medium leading-snug text-highlighted">
-                        {{ c.row.topic }}
+                        <span class="inline-flex items-start gap-1.5">
+                          <ScheduleHiddenBadge
+                            v-if="c.row.hidden"
+                            variant="icon"
+                            class="mt-0.5"
+                          />
+                          <span class="min-w-0">{{ c.row.topic }}</span>
+                        </span>
                       </p>
 
                       <p class="mt-1.5 line-clamp-2 text-xs text-muted">
@@ -710,10 +714,6 @@ function cancelDeleteEvent() {
                           class="tabular-nums"
                           :class="{ 'text-default': !isScheduleRowAllDay(entry.row) }"
                         >{{ formatScheduleRowTime(entry.row) }}</span>
-                        <ScheduleHiddenBadge
-                          v-if="entry.row.hidden && !isScheduleRowViewRestricted(entry.row)"
-                          class="mt-1.5"
-                        />
                       </div>
                       <template v-if="isScheduleRowViewRestricted(entry.row)">
                         <div
@@ -738,9 +738,16 @@ function cancelDeleteEvent() {
                           <span class="min-w-0 whitespace-normal wrap-break-word">{{ formatSchedulePlace(entry.row) }}</span>
                         </div>
                         <div
-                          class="flex min-h-[100px] flex-col justify-center border-r border-default p-4 text-sm leading-5 text-default"
+                          class="flex min-h-[100px] flex-col justify-center gap-1.5 border-r border-default p-4 text-sm leading-5 text-default"
                         >
-                          {{ entry.row.topic }}
+                          <span class="inline-flex min-w-0 items-start gap-2">
+                            <ScheduleHiddenBadge
+                              v-if="entry.row.hidden"
+                              variant="icon"
+                              class="mt-0.5 shrink-0"
+                            />
+                            <span class="min-w-0 whitespace-normal wrap-break-word">{{ entry.row.topic }}</span>
+                          </span>
                         </div>
                         <div
                           class="flex min-h-[100px] flex-wrap content-center items-center gap-3 border-r border-default p-4"
