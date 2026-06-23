@@ -1,0 +1,116 @@
+import { nextTick, onScopeDispose, ref, watch } from 'vue'
+import { useColorMode } from '@vueuse/core'
+import {
+  buildBrandLogoSvg,
+  disposePrimaryColorProbe,
+  fetchFaviconTemplate,
+  rasterImageToColoredDataUrl,
+  readPrimaryColor,
+  recolorSvgMarkup,
+  revokeObjectUrl,
+  svgMarkupToBlobUrl,
+  updateFaviconHref,
+} from '../utils/dynamic-favicon'
+
+export interface UseDynamicFaviconOptions {
+  /** Static favicon path from `public/` (SVG preferred). */
+  source?: string
+  rel?: string
+}
+
+/**
+ * Keeps the browser favicon in sync with Nuxt UI primary color (`--ui-primary`).
+ * Client-only; safe to call during SSR (no-op until mounted).
+ */
+export function useDynamicFavicon(options: UseDynamicFaviconOptions = {}) {
+  const source = options.source ?? new URL('logoASR.svg', import.meta.env.BASE_URL).pathname
+  const rel = options.rel ?? 'icon'
+
+  const primaryColor = ref<string | null>(null)
+  const appConfig = useAppConfig()
+  const colorMode = useColorMode()
+
+  let activeObjectUrl: string | null = null
+  let svgTemplate: string | null = null
+  let templateLoaded = false
+  let updateToken = 0
+
+  async function ensureTemplate(): Promise<string | null> {
+    if (templateLoaded)
+      return svgTemplate
+
+    templateLoaded = true
+    svgTemplate = await fetchFaviconTemplate(source)
+    return svgTemplate
+  }
+
+  async function applyFavicon(color: string): Promise<void> {
+    const token = ++updateToken
+
+    let href: string | null = null
+
+    const template = await ensureTemplate()
+    if (token !== updateToken)
+      return
+
+    if (template) {
+      const svg = recolorSvgMarkup(template, color)
+      href = svgMarkupToBlobUrl(svg)
+    } else {
+      const rasterHref = await rasterImageToColoredDataUrl(source, color)
+      if (token !== updateToken)
+        return
+
+      if (rasterHref) {
+        href = rasterHref
+      } else {
+        href = svgMarkupToBlobUrl(buildBrandLogoSvg(color))
+      }
+    }
+
+    if (token !== updateToken) {
+      revokeObjectUrl(href)
+      return
+    }
+
+    revokeObjectUrl(activeObjectUrl)
+    activeObjectUrl = href.startsWith('blob:') ? href : null
+    updateFaviconHref(href, rel)
+    primaryColor.value = color
+  }
+
+  function scheduleUpdate(): void {
+    if (typeof window === 'undefined')
+      return
+
+    requestAnimationFrame(() => {
+      void applyFavicon(readPrimaryColor())
+    })
+  }
+
+  if (typeof window !== 'undefined') {
+    watch(
+      () => [appConfig.ui.colors.primary, colorMode.value] as const,
+      async () => {
+        await nextTick()
+        scheduleUpdate()
+      },
+      { immediate: true },
+    )
+
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
+    prefersDark.addEventListener('change', scheduleUpdate)
+
+    onScopeDispose(() => {
+      prefersDark.removeEventListener('change', scheduleUpdate)
+      revokeObjectUrl(activeObjectUrl)
+      activeObjectUrl = null
+      disposePrimaryColorProbe()
+    })
+  }
+
+  return {
+    primaryColor,
+    refresh: scheduleUpdate,
+  }
+}

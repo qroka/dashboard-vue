@@ -1,16 +1,20 @@
+<script setup lang="ts">
+import { BRAND_LOGO_PATH_D, BRAND_LOGO_VIEW_BOX } from '../constants/brand-logo'
+</script>
+
 <template>
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
     height="20"
-    viewBox="0 0 20 20"
+    :viewBox="BRAND_LOGO_VIEW_BOX"
     fill="none"
     class="block h-5 w-auto max-h-5 max-w-28 shrink-0 text-primary"
     aria-hidden="true"
   >
     <path
       fill="currentColor"
-      d="M18.5557 0C19.3516 0 19.9978 0.643646 19.998 1.43652V2.02637L20 10.0488C20 15.5435 15.5271 20 10.0117 20H0L17.0244 3.03906L13.9746 0H18.5557ZM10.0371 9.99805L0.000976562 19.998V16.6172H2.65723V13.9717H0.000976562V11.3232H2.65723V8.6748H0.000976562V6.02637H2.65723V3.38086H0.000976562V0L10.0371 9.99805ZM2.66113 11.3213V13.9697H5.31934V11.3213H2.66113ZM5.32324 8.6748V11.3232H7.98145V8.6748H5.32324ZM2.66113 6.02637V8.6748H5.31934V6.02637H2.66113Z"
+      :d="BRAND_LOGO_PATH_D"
     />
   </svg>
 </template>

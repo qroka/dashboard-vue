@@ -3,8 +3,10 @@ import { ref, watchEffect, nextTick } from 'vue'
 import { useHead } from '@unhead/vue'
 import { useColorMode } from '@vueuse/core'
 import { ru } from '@nuxt/ui/locale'
+import { useDynamicFavicon } from './composables/useDynamicFavicon'
 
 const colorMode = useColorMode()
+useDynamicFavicon()
 
 /** Совпадает с `bg-default` у `body` (Nuxt UI), для `<meta name="theme-color">`. */
 const themeColor = ref('#ffffff')
