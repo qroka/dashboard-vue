@@ -177,6 +177,22 @@ export function formatParticipantShortName(name: string): string {
   return `${surname} ${initials}`
 }
 
+/** Инициалы для компактного отображения: «Иванов Иван Иванович» → «ИИ». */
+export function formatParticipantInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length)
+    return '?'
+  if (parts.length === 1) {
+    const word = parts[0]!
+    return word.length >= 2
+      ? word.slice(0, 2).toUpperCase()
+      : word.charAt(0).toUpperCase()
+  }
+  if (parts.length === 2)
+    return (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
+  return (parts[1]!.charAt(0) + parts[2]!.charAt(0)).toUpperCase()
+}
+
 export function formatAttachmentFileSize(bytes: number): string {
   if (bytes < 1024)
     return `${bytes} Б`

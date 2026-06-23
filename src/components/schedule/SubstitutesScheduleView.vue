@@ -30,6 +30,7 @@ import {
   ensureSubstituteGroup,
   formatSchedulePlace,
   formatScheduleRowTime,
+  formatParticipantInitials,
   isScheduleRowAllDay,
   isScheduleRowViewRestricted,
   buildScheduleDayBlockHeading,
@@ -756,22 +757,20 @@ function cancelDeleteEvent() {
                         v-if="c.row.participants.length || c.row.attachmentFiles.length"
                         class="mt-3 flex items-center justify-between gap-2 border-t border-default/80 pt-2.5"
                       >
-                        <div v-if="c.row.participants.length" class="flex min-w-0 items-center">
-                          <div class="flex -space-x-1.5">
-                            <UAvatar
-                              v-for="(p, pi) in c.row.participants.slice(0, 3)"
-                              :key="pi"
-                              :src="p.avatarSrc"
-                              :alt="p.name"
-                              size="2xs"
-                              class="ring-2 ring-bg"
-                            />
-                          </div>
+                        <div v-if="c.row.participants.length" class="flex min-w-0 flex-wrap items-center gap-1">
                           <span
-                            v-if="c.row.participants.length > 3"
-                            class="ms-1.5 shrink-0 text-xs text-dimmed tabular-nums"
+                            v-for="(p, pi) in c.row.participants.slice(0, 4)"
+                            :key="pi"
+                            class="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-elevated text-[10px] font-semibold leading-none text-default ring-1 ring-default"
+                            :title="p.name"
                           >
-                            +{{ c.row.participants.length - 3 }}
+                            {{ formatParticipantInitials(p.name) }}
+                          </span>
+                          <span
+                            v-if="c.row.participants.length > 4"
+                            class="shrink-0 text-xs text-dimmed tabular-nums"
+                          >
+                            +{{ c.row.participants.length - 4 }}
                           </span>
                         </div>
                         <span
