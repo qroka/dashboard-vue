@@ -32,6 +32,7 @@ data/
 # Auto-generated type declarations
 auto-imports.d.ts
 components.d.ts
+src/route-map.d.ts
 tsconfig.app.tsbuildinfo
 tsconfig.node.tsbuildinfo
 

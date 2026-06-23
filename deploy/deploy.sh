@@ -90,6 +90,28 @@ fi
 
 STAMP="$(date +%F-%H%M%S)"
 
+# Файлы, которые пересоздаёт vite/vue-router при сборке — не должны блокировать pull.
+GIT_GENERATED_PATHS=(
+  src/route-map.d.ts
+  auto-imports.d.ts
+  components.d.ts
+)
+
+restore_generated_files() {
+  run cd "$APP_DIR"
+  local path
+  for path in "${GIT_GENERATED_PATHS[@]}"; do
+    if [[ ! -f "$path" ]]; then
+      continue
+    fi
+    if ! git diff --quiet HEAD -- "$path" 2>/dev/null; then
+      log "Сброс локальных изменений (автогенерация): $path"
+      run git restore --source=HEAD --worktree "$path" 2>/dev/null \
+        || run git checkout HEAD -- "$path"
+    fi
+  done
+}
+
 backup_database() {
   [[ "$SKIP_BACKUP" -eq 1 ]] && { log "Бэкап пропущен (--skip-backup)"; return 0; }
 
@@ -124,6 +146,7 @@ pull_code() {
   [[ "$SKIP_PULL" -eq 1 ]] && { log "git pull пропущен (--skip-pull)"; return 0; }
 
   log "Обновление кода из git ($APP_DIR)"
+  restore_generated_files
   run cd "$APP_DIR"
 
   local branch="$GIT_BRANCH"
