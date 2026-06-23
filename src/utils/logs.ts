@@ -1,3 +1,4 @@
+import { figmaScheduleAssets } from '../config/figma-mcp-assets'
 import type {
   ActivityLogCategory,
   ActivityLogEntry,
@@ -7,6 +8,7 @@ import type {
   ActivityLogMeta,
   ActivityLogScope,
 } from '../types/logs'
+import type { ScheduleParticipant } from '../types/schedule'
 
 export const BUSINESS_LOG_CATEGORIES: ActivityLogCategory[] = [
   'auth',
@@ -91,6 +93,65 @@ export function parseActivityLogMeta(meta: unknown): ActivityLogMeta | null {
 export function activityLogHasEventDetails(entry: ActivityLogEntry): boolean {
   const meta = parseActivityLogMeta(entry.meta)
   return Boolean(meta?.fields?.length || meta?.changes?.length)
+}
+
+export function isActivityLogSystemActor(
+  entry: Pick<ActivityLogEntry, 'userLogin' | 'userName'>,
+): boolean {
+  return !entry.userName?.trim() && !entry.userLogin?.trim()
+}
+
+export function findLogActorParticipant(
+  entry: Pick<ActivityLogEntry, 'userLogin' | 'userName'>,
+  participants: ScheduleParticipant[],
+): ScheduleParticipant | null {
+  const login = entry.userLogin?.trim().toLowerCase()
+  if (login) {
+    const byLogin = participants.find(p => p.login?.toLowerCase() === login)
+    if (byLogin)
+      return byLogin
+  }
+
+  const name = entry.userName?.trim().toLowerCase()
+  if (name) {
+    const byName = participants.find(p => p.name.trim().toLowerCase() === name)
+    if (byName)
+      return byName
+  }
+
+  return null
+}
+
+export function buildFallbackLogActorParticipant(
+  entry: Pick<ActivityLogEntry, 'userLogin' | 'userName'>,
+): ScheduleParticipant | null {
+  const displayName = entry.userName?.trim() || entry.userLogin?.trim()
+  if (!displayName)
+    return null
+
+  const parts = displayName.split(/\s+/)
+  return {
+    name: displayName,
+    avatarSrc: figmaScheduleAssets.avatar,
+    login: entry.userLogin?.trim() || undefined,
+    card: {
+      line1: parts.length > 1 ? parts.slice(0, -1).join(' ') : displayName,
+      line2: parts.length > 1 ? parts[parts.length - 1]! : '',
+      email: entry.userLogin?.trim() ?? '',
+      phone: '',
+      address: '',
+    },
+  }
+}
+
+export function resolveLogActorParticipant(
+  entry: Pick<ActivityLogEntry, 'userLogin' | 'userName'>,
+  participants: ScheduleParticipant[],
+): ScheduleParticipant | null {
+  if (isActivityLogSystemActor(entry))
+    return null
+  return findLogActorParticipant(entry, participants)
+    ?? buildFallbackLogActorParticipant(entry)
 }
 
 export function formatActivityLogTimestamp(value: string): string {

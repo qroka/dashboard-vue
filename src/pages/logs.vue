@@ -4,15 +4,32 @@ meta:
 </route>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useHead } from '@unhead/vue'
 import type { TabsItem } from '@nuxt/ui'
+import { fetchEventById } from '../api/events'
+import { buildScheduleEventSelection } from '../api/schedule-mapper'
 import ActivityLogEntryCard from '../components/logs/ActivityLogEntryCard.vue'
+import ScheduleEventSlideover from '../components/schedule/ScheduleEventSlideover.vue'
 import { useActivityLogs } from '../composables/useActivityLogs'
 import type { ActivityLogLevel } from '../types/logs'
-import { activityLogScopeLabel } from '../utils/logs'
+import { useParticipants } from '../composables/useParticipants'
+import { usePermissions } from '../composables/usePermissions'
+import type { ActivityLogEntry, ActivityLogLevel } from '../types/logs'
+import type {
+  ScheduleAttachmentFile,
+  ScheduleDateBlock,
+  ScheduleRow,
+  ScheduleUserGroup,
+} from '../types/schedule'
+import { activityLogScopeLabel, resolveLogActorParticipant } from '../utils/logs'
+import { createScheduleDateBlocks } from '../utils/schedule'
 
 useHead({ title: 'Журнал событий' })
+
+const toast = useToast()
+const { canEditSubstituteSlug } = usePermissions()
+const { participants, load: loadParticipants } = useParticipants()
 
 const {
   loading,
@@ -29,6 +46,17 @@ const {
   nextPage,
   prevPage,
 } = useActivityLogs()
+
+const eventDetailOpen = ref(false)
+const eventLoading = ref(false)
+const eventSelection = ref<{
+  block: ScheduleDateBlock
+  group: ScheduleUserGroup
+  row: ScheduleRow
+  initialAttachments: ScheduleAttachmentFile[]
+} | null>(null)
+
+const createDayBlocks = computed(() => createScheduleDateBlocks())
 
 const scopeTabs = computed<TabsItem[]>(() => [
   { label: activityLogScopeLabel('business'), value: 'business', icon: 'i-lucide-briefcase' },
@@ -57,9 +85,54 @@ const hasActiveFilters = computed(() =>
   searchQuery.value.trim().length > 0 || levelFilter.value !== 'all',
 )
 
+function actorParticipantFor(entry: ActivityLogEntry) {
+  return resolveLogActorParticipant(entry, participants.value)
+}
+
+function canEditGroup(group: ScheduleUserGroup): boolean {
+  return canEditSubstituteSlug(group.substituteKey)
+}
+
+async function openEventFromLog(eventId: number) {
+  if (eventLoading.value)
+    return
+
+  eventLoading.value = true
+  try {
+    const event = await fetchEventById(eventId)
+    const selection = buildScheduleEventSelection(event)
+    if (!selection) {
+      throw new Error('Не удалось открыть мероприятие')
+    }
+
+    eventSelection.value = {
+      ...selection,
+      initialAttachments: selection.row.attachmentFiles.map(f => ({ ...f })),
+    }
+    eventDetailOpen.value = true
+  } catch (e) {
+    toast.add({
+      title: 'Не удалось открыть мероприятие',
+      description: e instanceof Error ? e.message : 'Попробуйте позже',
+      color: 'error',
+    })
+  } finally {
+    eventLoading.value = false
+  }
+}
+
 function onLevelChange(value: unknown) {
   levelFilter.value = (value ?? 'all') as ActivityLogLevel | 'all'
 }
+
+onMounted(() => {
+  void loadParticipants()
+})
+
+watch(eventDetailOpen, (isOpen) => {
+  if (!isOpen)
+    eventSelection.value = null
+})
 </script>
 
 <template>
@@ -161,13 +234,15 @@ function onLevelChange(value: unknown) {
 
         <div
           v-else
-          class="min-h-0 flex-1 overflow-y-auto"
+          class="min-h-0 flex-1 overflow-y-auto p-px"
         >
           <div class="space-y-3 pb-1">
             <ActivityLogEntryCard
               v-for="entry in items"
               :key="entry.id"
               :entry="entry"
+              :actor-participant="actorParticipantFor(entry)"
+              @open-event="openEventFromLog"
             />
           </div>
         </div>
@@ -204,6 +279,16 @@ function onLevelChange(value: unknown) {
           </div>
         </div>
       </div>
+
+      <ScheduleEventSlideover
+        v-model:open="eventDetailOpen"
+        :selection="eventSelection"
+        :editable="false"
+        :is-create="false"
+        :create-day-blocks="createDayBlocks"
+        :available-participants="participants"
+        :can-edit="eventSelection ? canEditGroup(eventSelection.group) : false"
+      />
     </template>
   </UDashboardPanel>
 </template>

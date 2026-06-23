@@ -10,6 +10,8 @@ export interface ScheduleAttachmentFile {
 
 export interface ScheduleParticipant {
   externalId?: number
+  /** Логин CRM — для сопоставления с записями журнала. */
+  login?: string
   name: string
   avatarSrc: string
   card: {

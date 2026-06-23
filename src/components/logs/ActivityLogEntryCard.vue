@@ -1,16 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { ActivityLogEntry } from '../../types/logs'
+import type { ScheduleParticipant } from '../../types/schedule'
 import {
   activityLogCategoryLabel,
   activityLogHasEventDetails,
   activityLogLevelLabel,
   formatActivityLogTimestamp,
+  isActivityLogSystemActor,
   parseActivityLogMeta,
 } from '../../utils/logs'
+import ScheduleParticipantPopoverChip from '../schedule/ScheduleParticipantPopoverChip.vue'
 
 const props = defineProps<{
   entry: ActivityLogEntry
+  actorParticipant?: ScheduleParticipant | null
+}>()
+
+const emit = defineEmits<{
+  openEvent: [eventId: number]
 }>()
 
 const expanded = ref(false)
@@ -38,17 +46,25 @@ const categoryIcon = computed(() => {
   return map[props.entry.category]
 })
 
-const actorLabel = computed(() => {
-  if (props.entry.userName?.trim())
-    return props.entry.userName.trim()
-  if (props.entry.userLogin?.trim())
-    return props.entry.userLogin.trim()
-  return 'Система'
-})
+const isSystemActor = computed(() => isActivityLogSystemActor(props.entry))
+
+const isEventEntity = computed(() =>
+  props.entry.entityType === 'event' && props.entry.entityId != null,
+)
 
 const hasDetails = computed(() => activityLogHasEventDetails(props.entry)
   || Boolean(meta.value?.files?.length)
   || props.entry.entityId != null)
+
+function toggleExpanded() {
+  if (hasDetails.value)
+    expanded.value = !expanded.value
+}
+
+function openEvent() {
+  if (props.entry.entityId != null)
+    emit('openEvent', props.entry.entityId)
+}
 </script>
 
 <template>
@@ -56,12 +72,7 @@ const hasDetails = computed(() => activityLogHasEventDetails(props.entry)
     variant="subtle"
     class="shrink-0 overflow-hidden transition-colors hover:ring-primary/20"
   >
-    <button
-      type="button"
-      class="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
-      :aria-expanded="hasDetails ? expanded : undefined"
-      @click="hasDetails ? (expanded = !expanded) : undefined"
-    >
+    <div class="flex w-full items-start gap-3 px-4 py-3">
       <div
         class="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-elevated ring ring-default"
       >
@@ -87,14 +98,31 @@ const hasDetails = computed(() => activityLogHasEventDetails(props.entry)
           </span>
         </div>
 
-        <p class="text-sm font-medium leading-snug text-highlighted">
-          {{ entry.message }}
-        </p>
+        <button
+          type="button"
+          class="-mx-1 w-full rounded-md px-1 py-0.5 text-left transition-colors hover:bg-elevated/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
+          :class="hasDetails ? 'cursor-pointer' : 'cursor-default'"
+          :aria-expanded="hasDetails ? expanded : undefined"
+          @click="toggleExpanded"
+        >
+          <p class="text-sm font-medium leading-snug text-highlighted">
+            {{ entry.message }}
+          </p>
+        </button>
 
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
           <span class="inline-flex items-center gap-1">
             <UIcon name="i-lucide-user" class="size-3.5 shrink-0" />
-            {{ actorLabel }}
+            <ScheduleParticipantPopoverChip
+              v-if="actorParticipant"
+              variant="table"
+              :participant="actorParticipant"
+              @click.stop
+            />
+            <span v-else-if="isSystemActor">Система</span>
+            <span v-else>
+              {{ entry.userName?.trim() || entry.userLogin?.trim() }}
+            </span>
           </span>
           <span v-if="entry.ipAddress" class="inline-flex items-center gap-1 tabular-nums">
             <UIcon name="i-lucide-globe" class="size-3.5 shrink-0" />
@@ -102,17 +130,34 @@ const hasDetails = computed(() => activityLogHasEventDetails(props.entry)
           </span>
           <span v-if="entry.entityId != null" class="inline-flex items-center gap-1">
             <UIcon name="i-lucide-hash" class="size-3.5 shrink-0" />
-            {{ entry.entityType ?? 'запись' }} #{{ entry.entityId }}
+            <UButton
+              v-if="isEventEntity"
+              variant="link"
+              color="primary"
+              size="xs"
+              class="h-auto p-0 font-normal"
+              :label="`${entry.entityType} #${entry.entityId}`"
+              @click.stop="openEvent"
+            />
+            <span v-else>
+              {{ entry.entityType ?? 'запись' }} #{{ entry.entityId }}
+            </span>
           </span>
         </div>
       </div>
 
-      <UIcon
+      <UButton
         v-if="hasDetails"
-        :name="expanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-        class="mt-1 size-4 shrink-0 text-dimmed"
+        color="neutral"
+        variant="ghost"
+        square
+        size="xs"
+        class="mt-1 shrink-0"
+        :icon="expanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+        :aria-label="expanded ? 'Свернуть детали' : 'Развернуть детали'"
+        @click="toggleExpanded"
       />
-    </button>
+    </div>
 
     <div
       v-if="expanded && hasDetails"

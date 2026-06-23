@@ -8,6 +8,7 @@ import type {
   ScheduleUserGroup,
 } from '../types/schedule'
 import {
+  createScheduleDateBlocks,
   ensureScheduleRowDetailMeta,
   findScheduleBlockIdByDate,
   scheduleParticipantKey,
@@ -18,6 +19,7 @@ export function crmParticipantToSchedule(p: ApiCrmParticipant): ScheduleParticip
   const parts = p.name.trim().split(/\s+/)
   return {
     externalId: p.id,
+    login: p.login,
     name: p.name,
     avatarSrc: p.avatar ?? figmaScheduleAssets.avatar,
     card: {
@@ -160,4 +162,19 @@ export type ScheduleSelection = {
   block: ScheduleDateBlock
   group: ScheduleUserGroup
   row: ScheduleRow
+}
+
+export function buildScheduleEventSelection(event: ApiEvent): ScheduleSelection | null {
+  if (!event.substituteSlug || !isScheduleSubstituteSlug(event.substituteSlug))
+    return null
+
+  const blocks = createScheduleDateBlocks()
+  const blockId = findScheduleBlockIdByDate(blocks, event.eventDate)
+  const block = (blockId ? blocks.find(b => b.id === blockId) : undefined) ?? blocks[0]
+  if (!block)
+    return null
+
+  const group = ensureSubstituteGroup(block, event.substituteSlug)
+  const row = apiEventToScheduleRow(event)
+  return { block, group, row }
 }
