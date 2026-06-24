@@ -131,11 +131,25 @@ export function getScheduleRowCreatedAt(row: ScheduleRow): string {
   return formatScheduleCreatedAtDisplay(raw)
 }
 
+/** Время по умолчанию для нового мероприятия: текущее, округлённое вверх до 5 минут. */
+export function defaultScheduleEventTime(date = new Date()): string {
+  let hours = date.getHours()
+  let minutes = date.getMinutes()
+  const remainder = minutes % 5
+  if (remainder !== 0)
+    minutes += 5 - remainder
+  if (minutes >= 60) {
+    minutes -= 60
+    hours = (hours + 1) % 24
+  }
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
 /** Пустая строка для формы «Новое мероприятие». */
 export function createEmptyScheduleRow(blockDate?: string): ScheduleRow {
   const date = blockDate ?? ''
   return {
-    time: '09:00',
+    time: defaultScheduleEventTime(),
     placeLabel: '',
     placeAddress: '',
     topic: '',
