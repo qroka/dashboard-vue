@@ -21,9 +21,9 @@
 }
 
 @layer base {
-  @media (min-width: 1940px) {
+  @media (min-width: 1920px) {
     html {
-      zoom: 1.5;
+      zoom: 1.15;
     }
   }
 
