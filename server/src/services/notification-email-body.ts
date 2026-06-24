@@ -1,5 +1,6 @@
 import type { Env } from '../config/env.js'
 import type { NotificationMeta, NotificationRow, NotificationType } from '../types/notifications.js'
+import { formatNameAndPatronymic } from '../utils/format-person-name.js'
 
 function appBaseUrl(env: Env): string {
   return env.CORS_ORIGIN.replace(/\/$/, '')
@@ -52,6 +53,8 @@ export function buildNotificationEmailText(
 ): string {
   const meta = notification.meta
   const name = options.recipientName?.trim()
+    ? formatNameAndPatronymic(options.recipientName)
+    : ''
   const lines = [
     name ? `Здравствуйте, ${name}!` : 'Здравствуйте!',
     '',
