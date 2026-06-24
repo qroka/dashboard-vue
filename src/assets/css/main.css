@@ -21,6 +21,12 @@
 }
 
 @layer base {
+  @media (min-width: 1920px) {
+    html {
+      zoom: 1.1;
+    }
+  }
+
   * {
     scrollbar-width: none;
     -ms-overflow-style: none;
