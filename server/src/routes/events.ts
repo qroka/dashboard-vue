@@ -31,11 +31,16 @@ import {
   canViewEvent,
   filterEventsForProfile,
 } from '../services/event-permissions.js'
-import type { UserAccessProfile } from '../types/auth.js'
+import type { LocalUser, UserAccessProfile } from '../types/auth.js'
+import { findLocalUsersByExternalIds } from '../repositories/users.js'
 import {
   applyEventVisibilityForProfile,
   type EnrichedEvent,
 } from '../utils/event-visibility.js'
+import {
+  resolveEventCreator,
+  resolveEventParticipants,
+} from '../utils/resolve-event-participants.js'
 
 const createEventSchema = z.object({
   substituteSlug: z.string().min(1),
@@ -86,21 +91,34 @@ function collectExternalIds(events: EventRecord[]): number[] {
 
 function enrichWithMap(
   event: EventRecord,
-  byId: Map<number, CrmParticipant>,
+  crmById: Map<number, CrmParticipant>,
+  localByExternalId: Map<number, LocalUser>,
 ): EnrichedEvent {
-  const creatorId = event.creatorExternalId
-  const participants = event.participantIds
-    .filter(id => id !== creatorId)
-    .map(id => byId.get(id))
-    .filter((p): p is CrmParticipant => p != null)
-
   return {
     ...event,
-    participants,
-    creator: creatorId
-      ? byId.get(creatorId) ?? null
-      : null,
+    participants: resolveEventParticipants(
+      event.participantIds,
+      crmById,
+      localByExternalId,
+    ),
+    creator: resolveEventCreator(
+      event.creatorExternalId,
+      crmById,
+      localByExternalId,
+    ),
   }
+}
+
+async function loadParticipantMaps(
+  ids: number[],
+  crm: CrmParticipantsService,
+) {
+  const uniqueIds = [...new Set(ids.filter(id => Number.isInteger(id) && id > 0))]
+  const crmParticipants = await crm.getByIds(uniqueIds)
+  const crmById = new Map(crmParticipants.map(p => [p.id, p]))
+  const missingIds = uniqueIds.filter(id => !crmById.has(id))
+  const localByExternalId = findLocalUsersByExternalIds(missingIds)
+  return { crmById, localByExternalId }
 }
 
 async function enrichEvent(
@@ -112,9 +130,11 @@ async function enrichEvent(
     ...event.participantIds,
     ...(event.creatorExternalId ? [event.creatorExternalId] : []),
   ]
-  const participants = await crm.getByIds(ids)
-  const byId = new Map(participants.map(p => [p.id, p]))
-  return applyEventVisibilityForProfile(enrichWithMap(event, byId), profile)
+  const { crmById, localByExternalId } = await loadParticipantMaps(ids, crm)
+  return applyEventVisibilityForProfile(
+    enrichWithMap(event, crmById, localByExternalId),
+    profile,
+  )
 }
 
 async function enrichEvents(
@@ -123,10 +143,12 @@ async function enrichEvents(
   profile: UserAccessProfile,
 ) {
   const allIds = collectExternalIds(events)
-  const participants = await crm.getByIds(allIds)
-  const byId = new Map(participants.map(p => [p.id, p]))
+  const { crmById, localByExternalId } = await loadParticipantMaps(allIds, crm)
   return events.map(event =>
-    applyEventVisibilityForProfile(enrichWithMap(event, byId), profile),
+    applyEventVisibilityForProfile(
+      enrichWithMap(event, crmById, localByExternalId),
+      profile,
+    ),
   )
 }
 

@@ -38,19 +38,9 @@ function resolveApiCreator(event: ApiEvent): ScheduleParticipant | undefined {
   return undefined
 }
 
-function participantsWithoutCreator(
-  event: ApiEvent,
-  creator?: ScheduleParticipant,
-): ScheduleParticipant[] {
-  const creatorKey = creator ? scheduleParticipantKey(creator) : null
-  return (event.participants ?? [])
-    .map(crmParticipantToSchedule)
-    .filter(p => scheduleParticipantKey(p) !== creatorKey)
-}
-
 export function apiEventToScheduleRow(event: ApiEvent): ScheduleRow {
   const creator = resolveApiCreator(event)
-  const participants = participantsWithoutCreator(event, creator)
+  const participants = (event.participants ?? []).map(crmParticipantToSchedule)
 
   const detailFromApi = (event.detail ?? {}) as Record<string, unknown>
   const { createdAt: _ignored, organizer: _legacyOrganizer, ...detailRest } = detailFromApi

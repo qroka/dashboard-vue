@@ -102,7 +102,7 @@ export async function getParticipantsByIdsFromMysql(
            COALESCE(NULLIF(u_position, ''), u_info, '') AS u_position,
            u_info
     FROM user
-    WHERE u_active = 1 AND u_id IN (${placeholders})
+    WHERE u_id IN (${placeholders})
   `
   const [rows] = await db.query(sql, ids)
   return (rows as ParticipantRow[]).map(mapRow)

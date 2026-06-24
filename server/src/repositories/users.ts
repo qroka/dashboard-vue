@@ -91,6 +91,26 @@ export function findUserById(id: number): LocalUser | null {
   return row ? mapUser(row) : null
 }
 
+export function findLocalUsersByExternalIds(externalIds: number[]): Map<number, LocalUser> {
+  const unique = [...new Set(externalIds.filter(id => Number.isInteger(id) && id > 0))]
+  if (!unique.length)
+    return new Map()
+
+  const placeholders = unique.map(() => '?').join(', ')
+  const rows = getDb()
+    .prepare(
+      `SELECT id, login, name, email, role, external_user_id, substitute_slug
+       FROM users WHERE external_user_id IN (${placeholders})`,
+    )
+    .all(...unique) as Omit<UserRow, 'password_hash'>[]
+
+  return new Map(
+    rows
+      .filter(row => row.external_user_id != null)
+      .map(row => [row.external_user_id!, mapUser(row)]),
+  )
+}
+
 export function findUserIdsByExternalIds(externalIds: number[]): Map<number, number> {
   const unique = [...new Set(externalIds.filter(id => Number.isInteger(id) && id > 0))]
   if (!unique.length)
