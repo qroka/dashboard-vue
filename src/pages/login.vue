@@ -95,7 +95,11 @@ async function onSubmit() {
       <UAlert
         color="neutral"
         variant="subtle"
-        icon="i-lucide-headset"
+        :ui="{
+          root: 'justify-center',
+          wrapper: 'items-center text-center',
+          description: 'text-center',
+        }"
       >
         <template #description>
           <p>По вопросам работы в системе,</p>
