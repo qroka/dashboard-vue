@@ -82,6 +82,10 @@ function mapRow(row: {
   }
 }
 
+function buildSearchPattern(q: string): string {
+  return `%${q.trim().toLocaleLowerCase('ru-RU')}%`
+}
+
 export function listActivityLogs(query: ListActivityLogsQuery): {
   total: number
   items: ActivityLogRow[]
@@ -113,14 +117,17 @@ export function listActivityLogs(query: ListActivityLogsQuery): {
     params.push(normalizeFilterDate(query.to, 'end'))
   }
   if (query.q?.trim()) {
-    const term = `%${query.q.trim().toLowerCase()}%`
+    const term = buildSearchPattern(query.q)
     clauses.push(`(
-      lower(message) LIKE ? OR lower(action) LIKE ?
-      OR lower(COALESCE(user_login, '')) LIKE ?
-      OR lower(COALESCE(user_name, '')) LIKE ?
-      OR lower(COALESCE(meta_json, '')) LIKE ?
+      fold_search(message) LIKE ?
+      OR fold_search(action) LIKE ?
+      OR fold_search(COALESCE(user_login, '')) LIKE ?
+      OR fold_search(COALESCE(user_name, '')) LIKE ?
+      OR fold_search(COALESCE(ip_address, '')) LIKE ?
+      OR fold_search(COALESCE(meta_json, '')) LIKE ?
+      OR CAST(COALESCE(entity_id, '') AS TEXT) LIKE ?
     )`)
-    params.push(term, term, term, term, term)
+    params.push(term, term, term, term, term, term, term)
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''

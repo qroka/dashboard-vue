@@ -26,6 +26,12 @@ export function initDatabase(env: Env): Database.Database {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
 
+  db.function('fold_search', { deterministic: true }, (value: unknown) => {
+    if (value === null || value === undefined)
+      return ''
+    return String(value).toLocaleLowerCase('ru-RU')
+  })
+
   runMigrations(db, env)
   return db
 }

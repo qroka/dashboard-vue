@@ -187,7 +187,7 @@ export function filterActivityLogs(
     category: ActivityLogCategory | 'all'
   },
 ): ActivityLogEntry[] {
-  const terms = options.query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const terms = options.query.trim().toLocaleLowerCase('ru-RU').split(/\s+/).filter(Boolean)
 
   return entries
     .filter((entry) => {
@@ -197,6 +197,12 @@ export function filterActivityLogs(
         return false
       if (!terms.length)
         return true
+      const meta = parseActivityLogMeta(entry.meta)
+      const metaText = [
+        ...(meta?.fields?.map(f => `${f.label} ${f.value}`) ?? []),
+        ...(meta?.changes?.flatMap(c => [c.label, c.before, c.after]) ?? []),
+        ...(meta?.files ?? []),
+      ].join(' ')
       const haystack = [
         entry.message,
         entry.action,
@@ -207,10 +213,11 @@ export function filterActivityLogs(
         entry.entityType,
         entry.entityId != null ? String(entry.entityId) : '',
         entry.ipAddress,
+        metaText,
       ]
         .filter(Boolean)
         .join(' ')
-        .toLowerCase()
+        .toLocaleLowerCase('ru-RU')
       return terms.every(term => haystack.includes(term))
     })
     .sort((a, b) => activityLogSortTime(b) - activityLogSortTime(a))
