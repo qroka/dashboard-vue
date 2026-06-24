@@ -12,9 +12,6 @@ import App from './App.vue'
 import { getAuthToken } from './api/client'
 import { useAuth } from './composables/useAuth'
 import { consumeSsoTokenFromUrl, stripSsoFromUrl } from './utils/crm-sso'
-import { captureClientHostnameFromUrl } from './utils/client-hostname'
-
-captureClientHostnameFromUrl()
 
 const app = createApp(App)
 

@@ -21,7 +21,7 @@ const emit = defineEmits<{
 }>()
 
 const displayName = computed(() =>
-  props.variant === 'table' || props.variant === 'log'
+  props.variant === 'table' || props.variant === 'log' || props.variant === 'header'
     ? formatParticipantShortName(props.participant.name)
     : props.participant.name,
 )

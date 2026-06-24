@@ -9,7 +9,7 @@ import {
 } from '../repositories/events.js'
 import { CrmParticipantsService } from '../services/crm-participants.js'
 import type { CrmParticipant } from '../types/crm.js'
-import { getRequestLogClient, logActivity } from '../services/activity-log.js'
+import { getRequestIp, logActivity } from '../services/activity-log.js'
 import {
   buildEventCreateLog,
   buildEventDeleteLog,
@@ -218,7 +218,7 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         userName: actor?.userName,
         entityType: 'event',
         entityId: event.id,
-        ...getRequestLogClient(request),
+        ipAddress: getRequestIp(request),
         meta: createLog.meta,
       }, request.log)
       try {
@@ -288,7 +288,7 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         userName: actor?.userName,
         entityType: 'event',
         entityId: event.id,
-        ...getRequestLogClient(request),
+        ipAddress: getRequestIp(request),
         meta: updateLog.meta,
       }, request.log)
 
@@ -338,7 +338,7 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         userName: actor?.userName,
         entityType: 'event',
         entityId: id,
-        ...getRequestLogClient(request),
+        ipAddress: getRequestIp(request),
         meta: deleteLog.meta,
       }, request.log)
 

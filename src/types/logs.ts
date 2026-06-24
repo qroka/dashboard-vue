@@ -50,6 +50,5 @@ export interface ActivityLogEntry {
   entityType?: string
   entityId?: number
   ipAddress?: string
-  clientHostname?: string
   meta?: ActivityLogMeta | null
 }

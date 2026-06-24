@@ -173,7 +173,7 @@ watch(eventDetailOpen, (isOpen) => {
             <UInput
               v-model="searchQuery"
               icon="i-lucide-search"
-              placeholder="Поиск по сообщению, пользователю, IP, компьютеру…"
+              placeholder="Поиск по сообщению, пользователю, IP…"
               size="lg"
               class="min-w-0 flex-1"
             />

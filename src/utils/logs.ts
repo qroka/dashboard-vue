@@ -207,7 +207,6 @@ export function filterActivityLogs(
         entry.entityType,
         entry.entityId != null ? String(entry.entityId) : '',
         entry.ipAddress,
-        entry.clientHostname,
       ]
         .filter(Boolean)
         .join(' ')

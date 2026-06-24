@@ -146,10 +146,6 @@ function openEvent() {
             <UIcon name="i-lucide-globe" class="size-3.5 shrink-0" />
             {{ entry.ipAddress }}
           </span>
-          <span v-if="entry.clientHostname" class="inline-flex items-center gap-1">
-            <UIcon name="i-lucide-monitor" class="size-3.5 shrink-0" />
-            {{ entry.clientHostname }}
-          </span>
           <UButton
             v-if="isEventEntity"
             color="neutral"

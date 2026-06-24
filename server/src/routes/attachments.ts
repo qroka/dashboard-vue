@@ -17,7 +17,7 @@ import {
   buildAttachmentUploadFailedMeta,
   buildAttachmentUploadMeta,
 } from '../services/attachment-activity-meta.js'
-import { getRequestLogClient, logActivity } from '../services/activity-log.js'
+import { getRequestIp, logActivity } from '../services/activity-log.js'
 import { jwtActor } from '../utils/request-context.js'
 
 export const attachmentsRoutes: FastifyPluginAsync = async app => {
@@ -93,7 +93,7 @@ export const attachmentsRoutes: FastifyPluginAsync = async app => {
           userName: actor?.userName,
           entityType: 'event',
           entityId: eventId,
-          ...getRequestLogClient(request),
+          ipAddress: getRequestIp(request),
           meta: uploadLog.meta,
         }, request.log)
 
@@ -127,7 +127,7 @@ export const attachmentsRoutes: FastifyPluginAsync = async app => {
             userName: actor?.userName,
             entityType: 'event',
             entityId: Number.isInteger(eventId) ? eventId : null,
-            ...getRequestLogClient(request),
+            ipAddress: getRequestIp(request),
             meta: failLog.meta,
           }, request.log)
           return reply.status(413).send({
@@ -228,7 +228,7 @@ export const attachmentsRoutes: FastifyPluginAsync = async app => {
         userName: actor?.userName,
         entityType: 'event',
         entityId: existing?.eventId ?? null,
-        ...getRequestLogClient(request),
+        ipAddress: getRequestIp(request),
         meta: deleteLog.meta,
       }, request.log)
 
