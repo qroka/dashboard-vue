@@ -1,4 +1,5 @@
 import { getDb } from '../db/sqlite.js'
+import { sqliteDatetimeToIso } from '../utils/sqlite-datetime.js'
 import type {
   NotificationMeta,
   NotificationRow,
@@ -34,8 +35,8 @@ function mapRow(row: {
     body: row.body,
     eventId: row.event_id,
     meta: parseMeta(row.meta_json),
-    readAt: row.read_at,
-    createdAt: row.created_at,
+    readAt: sqliteDatetimeToIso(row.read_at),
+    createdAt: sqliteDatetimeToIso(row.created_at) ?? row.created_at,
   }
 }
 

@@ -74,11 +74,7 @@ function removeParticipant(participant: ScheduleParticipant) {
     }"
   >
     <template #default>
-      <div
-        v-if="selectedParticipants.length"
-        class="flex flex-1 flex-wrap items-center gap-1.5"
-        @click.stop
-      >
+      <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 self-stretch py-0.5">
         <ScheduleParticipantPopoverChip
           v-for="participant in selectedParticipants"
           :key="scheduleParticipantKey(participant)"
@@ -87,10 +83,10 @@ function removeParticipant(participant: ScheduleParticipant) {
           :participant="participant"
           @remove="removeParticipant(participant)"
         />
+        <span v-if="!selectedParticipants.length" class="text-dimmed">
+          Выберите участников
+        </span>
       </div>
-      <span v-else class="text-dimmed">
-        Выберите участников
-      </span>
     </template>
   </USelectMenu>
 </template>

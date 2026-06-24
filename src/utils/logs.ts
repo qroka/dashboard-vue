@@ -153,14 +153,25 @@ export function resolveLogActorParticipant(
     ?? buildFallbackLogActorParticipant(entry)
 }
 
-export function formatActivityLogTimestamp(value: string): string {
+function parseLogTimestamp(value: string): Date | null {
   const trimmed = value.trim()
-  const normalized = /^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(trimmed)
-    ? trimmed.replace(' ', 'T')
-    : trimmed
-  const parsed = new Date(normalized)
-  if (Number.isNaN(parsed.getTime()))
-    return trimmed
+  if (!trimmed)
+    return null
+
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(trimmed))
+    return new Date(`${trimmed.replace(' ', 'T')}Z`)
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed) && !/[zZ]|[+-]\d{2}:\d{2}$/.test(trimmed))
+    return new Date(`${trimmed}Z`)
+
+  const parsed = new Date(trimmed)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+export function formatActivityLogTimestamp(value: string): string {
+  const parsed = parseLogTimestamp(value)
+  if (!parsed)
+    return value.trim()
   return parsed.toLocaleString('ru-RU', {
     day: '2-digit',
     month: '2-digit',
@@ -172,11 +183,7 @@ export function formatActivityLogTimestamp(value: string): string {
 }
 
 export function activityLogSortTime(entry: ActivityLogEntry): number {
-  const normalized = entry.createdAt.includes(' ')
-    ? entry.createdAt.replace(' ', 'T')
-    : entry.createdAt
-  const t = new Date(normalized).getTime()
-  return Number.isNaN(t) ? 0 : t
+  return parseLogTimestamp(entry.createdAt)?.getTime() ?? 0
 }
 
 export function filterActivityLogs(

@@ -1,4 +1,5 @@
 import { getDb } from '../db/sqlite.js'
+import { sqliteDatetimeToIso } from '../utils/sqlite-datetime.js'
 
 export interface ActivityLogRow {
   id: number
@@ -32,14 +33,7 @@ export interface ListActivityLogsQuery {
 }
 
 function sqliteToIso(createdAt: string): string {
-  const trimmed = createdAt.trim()
-  if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed))
-    return trimmed.endsWith('Z') ? trimmed : `${trimmed}Z`
-  const normalized = trimmed.replace(' ', 'T')
-  const parsed = new Date(`${normalized}Z`)
-  if (Number.isNaN(parsed.getTime()))
-    return trimmed
-  return parsed.toISOString()
+  return sqliteDatetimeToIso(createdAt) ?? createdAt
 }
 
 function parseMeta(json: string | null): Record<string, unknown> | null {
