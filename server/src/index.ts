@@ -3,12 +3,18 @@ import { loadProjectDotenv } from './config/load-dotenv.js'
 import { loadEnv } from './config/env.js'
 import { buildApp } from './app.js'
 import { logActivity } from './services/activity-log.js'
+import { startEventReminderWorker } from './services/event-reminder-worker.js'
 
 const loadedEnvFiles = loadProjectDotenv(fileURLToPath(import.meta.url))
 
 async function main() {
   const env = loadEnv()
   const app = await buildApp(env)
+  const stopReminders = startEventReminderWorker(app.log)
+
+  app.addHook('onClose', async () => {
+    stopReminders()
+  })
 
   try {
     await app.listen({ port: env.PORT, host: env.HOST })

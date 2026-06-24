@@ -14,6 +14,8 @@ import { useDragScroll } from '../../composables/useDragScroll'
 import { useWheelHorizontalScroll } from '../../composables/useWheelHorizontalScroll'
 import { usePermissions } from '../../composables/usePermissions'
 import { useScheduleApi } from '../../composables/useScheduleApi'
+import { fetchEventById } from '../../api/events'
+import { buildScheduleEventSelection } from '../../api/schedule-mapper'
 import type {
   ScheduleAttachmentFile,
   ScheduleDateBlock,
@@ -47,6 +49,7 @@ import ScheduleHiddenBadge from './ScheduleHiddenBadge.vue'
 import ScheduleHiddenEventLabel from './ScheduleHiddenEventLabel.vue'
 import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue'
 import PersonAvatar from '../PersonAvatar.vue'
+import NotificationsToolbarButton from '../notifications/NotificationsToolbarButton.vue'
 
 /** Карточка на доске: столбец = день (`ScheduleDateBlock`). */
 interface ScheduleBoardCard {
@@ -347,6 +350,34 @@ function openEventDetail(
   eventDetailOpen.value = true
 }
 
+async function openEventFromNotification(eventId: number) {
+  try {
+    const event = await fetchEventById(eventId)
+    const selection = buildScheduleEventSelection(event)
+    if (!selection) {
+      throw new Error('Не удалось открыть мероприятие')
+    }
+
+    if (selection.group.substituteKey !== substituteSlug.value) {
+      await router.push(schedulePathForSlug(selection.group.substituteKey))
+    }
+
+    eventSlideoverCreateMode.value = false
+    eventSlideoverEditable.value = false
+    eventSelection.value = {
+      ...selection,
+      initialAttachments: selection.row.attachmentFiles.map(f => ({ ...f })),
+    }
+    eventDetailOpen.value = true
+  } catch (e) {
+    toast.add({
+      title: 'Не удалось открыть мероприятие',
+      description: e instanceof Error ? e.message : 'Попробуйте позже',
+      color: 'error',
+    })
+  }
+}
+
 watch(eventDetailOpen, (isOpen) => {
   if (!isOpen) {
     eventSelection.value = null
@@ -540,6 +571,7 @@ function cancelDeleteEvent() {
         </template>
 
         <template #right>
+          <NotificationsToolbarButton @open-event="openEventFromNotification" />
           <UTabs v-model="view" :items="viewTabs" :content="false" size="lg" color="neutral"
             class="w-full max-w-[calc(100vw-12rem)] sm:max-w-md" />
         </template>

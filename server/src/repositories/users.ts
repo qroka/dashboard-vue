@@ -91,6 +91,22 @@ export function findUserById(id: number): LocalUser | null {
   return row ? mapUser(row) : null
 }
 
+export function findUserIdsByExternalIds(externalIds: number[]): Map<number, number> {
+  const unique = [...new Set(externalIds.filter(id => Number.isInteger(id) && id > 0))]
+  if (!unique.length)
+    return new Map()
+
+  const placeholders = unique.map(() => '?').join(', ')
+  const rows = getDb()
+    .prepare(
+      `SELECT id, external_user_id FROM users
+       WHERE external_user_id IN (${placeholders})`,
+    )
+    .all(...unique) as { id: number, external_user_id: number }[]
+
+  return new Map(rows.map(row => [row.external_user_id, row.id]))
+}
+
 export function findUserAccessById(id: number): UserAccessProfile | null {
   const user = findUserById(id)
   if (!user)

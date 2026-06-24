@@ -15,6 +15,13 @@ import {
   buildEventDeleteLog,
   buildEventUpdateLog,
 } from '../services/event-activity-meta.js'
+import {
+  diffParticipantIds,
+  notifyEventCancelled,
+  notifyEventUpdated,
+  notifyParticipantsAdded,
+  notifyParticipantsRemoved,
+} from '../services/event-notifications.js'
 import { resolveEventLogContext } from '../utils/event-log-context.js'
 import { jwtActor } from '../utils/request-context.js'
 import { resolveUserAccess } from '../utils/event-access.js'
@@ -221,6 +228,13 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         ipAddress: getRequestIp(request),
         meta: createLog.meta,
       }, request.log)
+
+      notifyParticipantsAdded(
+        event,
+        event.participantIds.filter(id => id !== event.creatorExternalId),
+        actor?.userId,
+      )
+
       try {
         return reply.status(201).send({
           success: true,
@@ -292,6 +306,23 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         meta: updateLog.meta,
       }, request.log)
 
+      const participantDiff = diffParticipantIds(
+        existing.participantIds,
+        event.participantIds,
+      )
+      notifyParticipantsAdded(event, participantDiff.added, actor?.userId)
+      notifyParticipantsRemoved(event, participantDiff.removed, actor?.userId)
+
+      const activeParticipants = event.participantIds.filter(
+        id => id !== event.creatorExternalId && existing.participantIds.includes(id),
+      )
+      notifyEventUpdated(
+        event,
+        updateLog.meta.changes,
+        activeParticipants,
+        actor?.userId,
+      )
+
       try {
         return { success: true, event: await enrichEvent(event, crm, profile) }
       } catch (error) {
@@ -341,6 +372,12 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         ipAddress: getRequestIp(request),
         meta: deleteLog.meta,
       }, request.log)
+
+      notifyEventCancelled(
+        existing,
+        existing.participantIds.filter(pid => pid !== existing.creatorExternalId),
+        actor?.userId,
+      )
 
       return { success: true }
     },

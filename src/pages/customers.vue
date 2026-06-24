@@ -11,6 +11,7 @@ import {
 import { formatPermissionSummary } from '../constants/crm-user-fields'
 import { useAuth } from '../composables/useAuth'
 import CrmUserSlideover from '../components/customers/CrmUserSlideover.vue'
+import NotificationsToolbarButton from '../components/notifications/NotificationsToolbarButton.vue'
 
 const t = {
   title: '\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0438 CRM',
@@ -214,6 +215,7 @@ const columns: TableColumn<ApiCrmUser>[] = [
           <UDashboardSidebarCollapse />
         </template>
         <template #right>
+          <NotificationsToolbarButton />
           <UButton
             :label="t.add"
             icon="i-lucide-plus"

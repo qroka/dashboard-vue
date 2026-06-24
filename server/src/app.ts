@@ -13,6 +13,7 @@ import { attachmentsRoutes } from './routes/attachments.js'
 import { logsRoutes } from './routes/logs.js'
 import { crmUsersRoutes } from './routes/crm-users.js'
 import { userThemeRoutes } from './routes/user-theme.js'
+import { notificationsRoutes } from './routes/notifications.js'
 import { ensureUploadDir } from './services/file-storage.js'
 import {
   requireAuthenticatedUser,
@@ -88,6 +89,7 @@ export async function buildApp(env: Env) {
   await app.register(logsRoutes, { prefix: '/api' })
   await app.register(crmUsersRoutes, { prefix: '/api' })
   await app.register(userThemeRoutes, { prefix: '/api' })
+  await app.register(notificationsRoutes, { prefix: '/api' })
 
   app.addHook('onClose', async () => {
     const { closeDatabase } = await import('./db/sqlite.js')

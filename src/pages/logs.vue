@@ -10,6 +10,7 @@ import type { TabsItem } from '@nuxt/ui'
 import { fetchEventById } from '../api/events'
 import { buildScheduleEventSelection } from '../api/schedule-mapper'
 import ActivityLogEntryCard from '../components/logs/ActivityLogEntryCard.vue'
+import NotificationsToolbarButton from '../components/notifications/NotificationsToolbarButton.vue'
 import ScheduleEventSlideover from '../components/schedule/ScheduleEventSlideover.vue'
 import { useActivityLogs } from '../composables/useActivityLogs'
 import { useParticipants } from '../composables/useParticipants'
@@ -148,6 +149,7 @@ watch(eventDetailOpen, (isOpen) => {
           <UDashboardSidebarCollapse />
         </template>
         <template #right>
+          <NotificationsToolbarButton @open-event="openEventFromLog" />
           <UTabs
             v-model="logScope"
             :items="scopeTabs"
