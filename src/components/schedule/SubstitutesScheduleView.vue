@@ -11,6 +11,7 @@ import {
 } from '../../config/schedule'
 import { useParticipants } from '../../composables/useParticipants'
 import { useDragScroll } from '../../composables/useDragScroll'
+import { useWheelHorizontalScroll } from '../../composables/useWheelHorizontalScroll'
 import { usePermissions } from '../../composables/usePermissions'
 import { useScheduleApi } from '../../composables/useScheduleApi'
 import type {
@@ -256,6 +257,7 @@ const {
   suppressClick: suppressBoardClick,
   onMouseDown: onBoardScrollMouseDown,
 } = useDragScroll(boardScrollRef)
+useWheelHorizontalScroll(boardScrollRef)
 
 const eventDetailOpen = ref(false)
 const eventSlideoverEditable = ref(false)
@@ -619,7 +621,7 @@ function cancelDeleteEvent() {
         <div v-else-if="view === 'board'" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             ref="boardScrollRef"
-            class="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-auto p-px pb-2 sm:gap-4"
+            class="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden p-px pb-2 sm:gap-4"
             :class="isBoardScrollDragging ? 'cursor-grabbing select-none' : 'cursor-grab'"
             @mousedown="onBoardScrollMouseDown"
           >
