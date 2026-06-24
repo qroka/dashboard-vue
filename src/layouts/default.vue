@@ -72,7 +72,11 @@ function scheduleNavItem(item: unknown): NavigationMenuItem {
       collapsible
       resizable
       class="bg-default"
-      :ui="{ footer: 'lg:border-t lg:border-default' }"
+      :ui="{
+        root: 'h-svh max-h-svh min-h-0',
+        body: 'min-h-0',
+        footer: 'lg:border-t lg:border-default',
+      }"
     >
       <template #header="{ collapsed }">
         <TeamsMenu :collapsed="collapsed" />
