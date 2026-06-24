@@ -3,6 +3,7 @@ import type { EventRecord } from '../types/events.js'
 import type { NotificationMeta } from '../types/notifications.js'
 import { createNotification } from '../repositories/notifications.js'
 import { findUserIdsByExternalIds } from '../repositories/users.js'
+import { queueNotificationEmail } from './notification-mail.js'
 
 function eventWhenLabel(event: EventRecord): string {
   const time = event.allDay ? 'весь день' : event.time
@@ -48,7 +49,7 @@ function notifyExternalUsers(
     if (!userId || userId === options.excludeUserId)
       continue
 
-    createNotification({
+    const notification = createNotification({
       userId,
       type: options.type,
       title: options.title,
@@ -56,6 +57,7 @@ function notifyExternalUsers(
       eventId: options.event.id,
       meta: eventMeta(options.event, options.changes),
     })
+    queueNotificationEmail(notification, options.event)
   }
 }
 

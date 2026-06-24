@@ -15,6 +15,7 @@ import { crmUsersRoutes } from './routes/crm-users.js'
 import { userThemeRoutes } from './routes/user-theme.js'
 import { notificationsRoutes } from './routes/notifications.js'
 import { ensureUploadDir } from './services/file-storage.js'
+import { initNotificationMail } from './services/notification-mail.js'
 import {
   requireAuthenticatedUser,
   syncUserFromDb,
@@ -43,6 +44,7 @@ export async function buildApp(env: Env) {
     logger: env.NODE_ENV === 'development',
   })
 
+  initNotificationMail(env, app.log)
   app.decorate('config', { env })
 
   await app.register(cors, {
