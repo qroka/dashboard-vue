@@ -31,10 +31,6 @@ interface ParticipantRow {
   u_login: string
   u_fio: string
   u_email: string
-  u_phone: string | null
-  u_office: string | null
-  u_position: string | null
-  u_info: string | null
 }
 
 function mapRow(row: ParticipantRow): CrmParticipant {
@@ -42,18 +38,14 @@ function mapRow(row: ParticipantRow): CrmParticipant {
   const parts = name.split(/\s+/).filter(Boolean)
   const line1 = parts.length > 1 ? parts.slice(0, -1).join(' ') : name
   const line2 = parts.length > 1 ? parts[parts.length - 1]! : ''
-  const office = row.u_office?.trim() || ''
-  const position = row.u_position?.trim() || row.u_info?.trim() || ''
 
   return {
     id: row.u_id,
     login: row.u_login,
     name,
     email: row.u_email?.trim() || undefined,
-    phone: row.u_phone?.trim() || undefined,
     line1,
     line2,
-    address: [position, office].filter(Boolean).join(', ') || undefined,
   }
 }
 
@@ -67,11 +59,7 @@ export async function listParticipantsFromMysql(
 ): Promise<CrmParticipant[]> {
   const db = await getPool(env)
   let sql = `
-    SELECT u_id, u_login, u_fio, u_email,
-           COALESCE(u_phone, '') AS u_phone,
-           COALESCE(u_office, '') AS u_office,
-           COALESCE(NULLIF(u_position, ''), u_info, '') AS u_position,
-           u_info
+    SELECT u_id, u_login, u_fio, u_email
     FROM user
     WHERE u_active = 1
   `
@@ -96,11 +84,7 @@ export async function getParticipantsByIdsFromMysql(
   const db = await getPool(env)
   const placeholders = ids.map(() => '?').join(',')
   const sql = `
-    SELECT u_id, u_login, u_fio, u_email,
-           COALESCE(u_phone, '') AS u_phone,
-           COALESCE(u_office, '') AS u_office,
-           COALESCE(NULLIF(u_position, ''), u_info, '') AS u_position,
-           u_info
+    SELECT u_id, u_login, u_fio, u_email
     FROM user
     WHERE u_id IN (${placeholders})
   `

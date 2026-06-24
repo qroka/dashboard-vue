@@ -368,12 +368,21 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         return reply.status(403).send({ success: false, error: 'Forbidden' })
       }
 
+      const actor = jwtActor(request)
+      const cancelRecipients = [
+        ...new Set([
+          ...existing.participantIds,
+          ...(existing.creatorExternalId ? [existing.creatorExternalId] : []),
+        ]),
+      ]
+      // Уведомления до удаления: event_id ссылается на events(id), иначе INSERT падает по FK.
+      notifyEventCancelled(existing, cancelRecipients, actor?.userId)
+
       const removed = await deleteEvent(app.config.env, id)
       if (!removed) {
         return reply.status(404).send({ success: false, error: 'Event not found' })
       }
 
-      const actor = jwtActor(request)
       const deleteCtx = await resolveEventLogContext(existing, crm)
       const deleteLog = buildEventDeleteLog(existing, deleteCtx)
       logActivity(app.config.env, {
@@ -389,12 +398,6 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         ipAddress: getRequestIp(request),
         meta: deleteLog.meta,
       }, request.log)
-
-      notifyEventCancelled(
-        existing,
-        existing.participantIds,
-        actor?.userId,
-      )
 
       return { success: true }
     },

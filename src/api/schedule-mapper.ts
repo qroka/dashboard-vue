@@ -25,8 +25,9 @@ export function crmParticipantToSchedule(p: ApiCrmParticipant): ScheduleParticip
       line1: p.line1 ?? (parts.length > 1 ? parts.slice(0, -1).join(' ') : p.name),
       line2: p.line2 ?? (parts.length > 1 ? parts[parts.length - 1]! : ''),
       email: p.email ?? '',
-      phone: p.phone ?? '',
-      address: p.address ?? '',
+      // Телефон и локация — после появления полей в CRM.
+      phone: '',
+      address: '',
     },
   }
 }
