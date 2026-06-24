@@ -4,6 +4,10 @@ import { findUserById } from '../repositories/users.js'
 import type { NotificationRow } from '../types/notifications.js'
 import type { EventRecord } from '../types/events.js'
 import { buildMailConfig, sendPlainTextMail } from './mail.js'
+import {
+  buildNotificationEmailSubject,
+  buildNotificationEmailText,
+} from './notification-email-body.js'
 import { resolveNotificationEmails } from './resolve-notification-emails.js'
 
 let mailEnv: Env | null = null
@@ -32,31 +36,6 @@ export function initNotificationMail(
   }
 }
 
-function appBaseUrl(env: Env): string {
-  return env.CORS_ORIGIN.replace(/\/$/, '')
-}
-
-function buildNotificationEmailText(
-  env: Env,
-  notification: NotificationRow,
-  event?: Pick<EventRecord, 'id' | 'substituteSlug'> | null,
-): string {
-  const lines = [notification.body]
-
-  if (event?.substituteSlug) {
-    lines.push('')
-    if (event.id)
-      lines.push(`Ссылка: ${appBaseUrl(env)}/${event.substituteSlug}`)
-    else
-      lines.push(`График: ${appBaseUrl(env)}/${event.substituteSlug}`)
-  }
-
-  lines.push('')
-  lines.push(appBaseUrl(env))
-
-  return lines.join('\r\n')
-}
-
 export async function deliverNotificationEmail(
   env: Env,
   notification: NotificationRow,
@@ -83,8 +62,11 @@ export async function deliverNotificationEmail(
     return 0
   }
 
-  const subject = notification.title
-  const text = buildNotificationEmailText(env, notification, event)
+  const subject = buildNotificationEmailSubject(notification)
+  const text = buildNotificationEmailText(env, notification, {
+    recipientName: user.name,
+    substituteSlug: event?.substituteSlug ?? null,
+  })
   let sent = 0
 
   for (const email of emails) {
