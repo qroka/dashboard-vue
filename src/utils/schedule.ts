@@ -548,7 +548,7 @@ export function createScheduleDateBlocks(
     blocks.push({
       id: `day-${offset}`,
       title: buildScheduleDayBlockTitle(date, offset),
-      defaultOpen: offset <= 2,
+      defaultOpen: true,
       groups: [],
     })
   }

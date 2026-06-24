@@ -21,15 +21,10 @@
 }
 
 @layer base {
-  @media (min-width: 1921px) {
-    html {
-      font-size: 110%;
-    }
-  }
-  @media (min-width: 2561px) {
-    html {
-      font-size: 125%;
-    }
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   * {
