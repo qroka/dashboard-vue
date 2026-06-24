@@ -35,30 +35,43 @@ function formatChangesBody(changes: EventLogChange[]): string {
 function notifyExternalUsers(
   externalIds: number[],
   options: {
-    excludeUserId?: number | null
+    excludeExternalUserId?: number | null
     type: 'event.added' | 'event.removed' | 'event.cancelled' | 'event.updated' | 'event.reminder'
     title: string
     body: string
     event: EventRecord
     changes?: EventLogChange[]
+    eventId?: number | null
   },
-): void {
+): number {
   const userIds = findUserIdsByExternalIds(externalIds)
+  let notified = 0
+
   for (const externalId of externalIds) {
-    const userId = userIds.get(externalId)
-    if (!userId || userId === options.excludeUserId)
+    if (options.excludeExternalUserId != null && externalId === options.excludeExternalUserId)
       continue
+
+    const userId = userIds.get(externalId)
+    if (!userId)
+      continue
+
+    const eventId = options.eventId !== undefined
+      ? options.eventId
+      : options.event.id
 
     const notification = createNotification({
       userId,
       type: options.type,
       title: options.title,
       body: options.body,
-      eventId: options.event.id,
+      eventId,
       meta: eventMeta(options.event, options.changes),
     })
     queueNotificationEmail(notification, options.event)
+    notified++
   }
+
+  return notified
 }
 
 export function notifyParticipantsAdded(
@@ -93,21 +106,30 @@ export function notifyParticipantsRemoved(
   })
 }
 
+export function collectEventCancelRecipients(event: EventRecord): number[] {
+  return [
+    ...new Set([
+      ...event.participantIds,
+      ...(event.creatorExternalId ? [event.creatorExternalId] : []),
+    ]),
+  ]
+}
+
 export function notifyEventCancelled(
   event: EventRecord,
   participantExternalIds: number[],
-  actorUserId?: number | null,
-): void {
+): number {
   if (!participantExternalIds.length)
-    return
+    return 0
 
   const when = eventWhenLabel(event)
-  notifyExternalUsers(participantExternalIds, {
-    excludeUserId: actorUserId,
+  return notifyExternalUsers(participantExternalIds, {
     type: 'event.cancelled',
     title: 'Мероприятие отменено',
     body: `«${event.topic}»\n${when}`,
     event,
+    // Событие удаляется — не привязываем уведомление к event_id (FK + ON DELETE SET NULL).
+    eventId: null,
   })
 }
 

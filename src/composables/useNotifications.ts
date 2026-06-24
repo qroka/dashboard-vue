@@ -8,7 +8,7 @@ import {
 import type { AppNotification } from '../types/notifications'
 import { useAuth } from './useAuth'
 
-const POLL_MS = 60_000
+const POLL_MS = 15_000
 
 export function useNotifications() {
   const { ready, fetchMe } = useAuth()

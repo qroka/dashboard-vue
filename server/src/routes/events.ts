@@ -16,6 +16,7 @@ import {
   buildEventUpdateLog,
 } from '../services/event-activity-meta.js'
 import {
+  collectEventCancelRecipients,
   diffParticipantIds,
   notifyEventCancelled,
   notifyEventUpdated,
@@ -369,14 +370,25 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
       }
 
       const actor = jwtActor(request)
-      const cancelRecipients = [
-        ...new Set([
-          ...existing.participantIds,
-          ...(existing.creatorExternalId ? [existing.creatorExternalId] : []),
-        ]),
-      ]
-      // Уведомления до удаления: event_id ссылается на events(id), иначе INSERT падает по FK.
-      notifyEventCancelled(existing, cancelRecipients, actor?.userId)
+      const cancelRecipients = collectEventCancelRecipients(existing)
+      let notified = 0
+      try {
+        notified = notifyEventCancelled(existing, cancelRecipients)
+        request.log.info({
+          eventId: id,
+          recipientExternalIds: cancelRecipients,
+          notified,
+        }, 'event cancel notifications')
+        if (cancelRecipients.length && notified < cancelRecipients.length) {
+          request.log.warn({
+            eventId: id,
+            recipientExternalIds: cancelRecipients,
+            notified,
+          }, 'cancel notifications skipped: participant has no local grafic account')
+        }
+      } catch (err) {
+        request.log.error({ err, eventId: id, cancelRecipients }, 'event cancel notifications failed')
+      }
 
       const removed = await deleteEvent(app.config.env, id)
       if (!removed) {
