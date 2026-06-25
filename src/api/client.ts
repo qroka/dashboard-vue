@@ -11,15 +11,22 @@ export class ApiError extends Error {
   }
 }
 
+/** @deprecated JWT хранится в HttpOnly cookie; оставлено для миграции со старых сессий. */
 export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
 
+/** @deprecated */
 export function setAuthToken(token: string | null): void {
   if (token)
     localStorage.setItem(TOKEN_KEY, token)
   else
     localStorage.removeItem(TOKEN_KEY)
+}
+
+/** Удаляет устаревший токен из localStorage после перехода на cookie. */
+export function clearLegacyAuthToken(): void {
+  localStorage.removeItem(TOKEN_KEY)
 }
 
 export async function apiFetch<T>(
@@ -30,11 +37,11 @@ export async function apiFetch<T>(
   if (!headers.has('Content-Type') && options.body)
     headers.set('Content-Type', 'application/json')
 
-  const token = getAuthToken()
-  if (token)
-    headers.set('Authorization', `Bearer ${token}`)
-
-  const response = await fetch(path, { ...options, headers })
+  const response = await fetch(path, {
+    ...options,
+    headers,
+    credentials: 'include',
+  })
   const text = await response.text()
   let data: unknown = null
   if (text) {

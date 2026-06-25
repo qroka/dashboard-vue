@@ -1,28 +1,22 @@
 import { computed, ref } from 'vue'
-import { apiFetch, getAuthToken, setAuthToken } from '../api/client'
+import { apiFetch, clearLegacyAuthToken } from '../api/client'
 import type { ApiLoginResponse, ApiUser } from '../api/types'
 
 const user = ref<ApiUser | null>(null)
 const ready = ref(false)
 
 export function useAuth() {
-  const isAuthenticated = computed(() => Boolean(getAuthToken() && user.value))
+  const isAuthenticated = computed(() => Boolean(user.value))
   const canViewLogs = computed(() => user.value?.role === 'admin')
 
   async function fetchMe(): Promise<ApiUser | null> {
-    if (!getAuthToken()) {
-      user.value = null
-      ready.value = true
-      return null
-    }
     try {
       const res = await apiFetch<{ success: boolean, user?: ApiUser }>('/api/auth/me')
       user.value = res.user ?? null
-      if (!res.user)
-        setAuthToken(null)
+      if (res.user)
+        clearLegacyAuthToken()
       return user.value
     } catch {
-      setAuthToken(null)
       user.value = null
       return null
     } finally {
@@ -41,8 +35,8 @@ export function useAuth() {
           method: 'POST',
           body,
         })
-        if (res.success && res.token && res.user) {
-          setAuthToken(res.token)
+        if (res.success && res.user) {
+          clearLegacyAuthToken()
           user.value = res.user
           ready.value = true
           return
@@ -62,16 +56,22 @@ export function useAuth() {
       method: 'POST',
       body: JSON.stringify({ token: ssoToken }),
     })
-    if (!res.success || !res.token || !res.user)
+    if (!res.success || !res.user)
       throw new Error(res.error ?? 'Не удалось войти через CRM')
-    setAuthToken(res.token)
+    clearLegacyAuthToken()
     user.value = res.user
     ready.value = true
   }
 
-  function logout(): void {
-    setAuthToken(null)
+  async function logout(): Promise<void> {
+    try {
+      await apiFetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      // cookie могла уже истечь
+    }
+    clearLegacyAuthToken()
     user.value = null
+    ready.value = true
   }
 
   return {

@@ -9,11 +9,13 @@ import { createHead } from '@unhead/vue/client'
 import ui from '@nuxt/ui/vue-plugin'
 
 import App from './App.vue'
-import { getAuthToken } from './api/client'
+import { clearLegacyAuthToken } from './api/client'
 import { useAuth } from './composables/useAuth'
 import { consumeSsoTokenFromUrl, stripSsoFromUrl } from './utils/crm-sso'
 
 const app = createApp(App)
+
+clearLegacyAuthToken()
 
 let ssoBootstrap: Promise<void> = Promise.resolve()
 const ssoToken = consumeSsoTokenFromUrl()
@@ -36,21 +38,20 @@ router.beforeEach(async (to) => {
   await ssoBootstrap
 
   const isPublic = Boolean(to.meta.public)
-  const token = getAuthToken()
+  const { fetchMe, ready, user, canViewLogs } = useAuth()
 
-  if (!token && !isPublic)
+  if (!ready.value)
+    await fetchMe()
+
+  const authenticated = Boolean(user.value)
+
+  if (!authenticated && !isPublic)
     return { path: '/login', query: { redirect: to.fullPath } }
 
-  if (token && to.path === '/login')
+  if (authenticated && to.path === '/login')
     return { path: '/' }
 
-  if (token && !isPublic) {
-    const { fetchMe, ready, canViewLogs } = useAuth()
-    if (!ready.value)
-      await fetchMe()
-    if (!getAuthToken())
-      return { path: '/login', query: { redirect: to.fullPath } }
-
+  if (authenticated && !isPublic) {
     const isLogsRoute = to.path === '/logs' || to.path === '/logs/'
     if ((to.meta.requiresAdmin || isLogsRoute) && !canViewLogs.value)
       return { path: '/' }

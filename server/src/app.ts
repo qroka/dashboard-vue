@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import cookie from '@fastify/cookie'
 import jwt from '@fastify/jwt'
 import multipart from '@fastify/multipart'
 import type { Env } from './config/env.js'
@@ -20,6 +21,7 @@ import {
   requireAuthenticatedUser,
   syncUserFromDb,
 } from './utils/auth-user.js'
+import { AUTH_COOKIE_NAME } from './utils/auth-cookie.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -52,9 +54,15 @@ export async function buildApp(env: Env) {
     credentials: true,
   })
 
+  await app.register(cookie)
+
   await app.register(jwt, {
     secret: env.JWT_SECRET,
     sign: { expiresIn: env.JWT_EXPIRES_IN },
+    cookie: {
+      cookieName: AUTH_COOKIE_NAME,
+      signed: false,
+    },
   })
 
   await app.register(multipart, {

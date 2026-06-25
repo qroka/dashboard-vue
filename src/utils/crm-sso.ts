@@ -1,14 +1,11 @@
-/** »звлекает SSO-токен из hash (#sso=...) или query (?sso=). */
+/** »звлекает SSO-токен только из hash (#sso=...); query (?sso=) не используетс€ Ч токен не попадает в логи сервера. */
 export function consumeSsoTokenFromUrl(): string | null {
   const hash = window.location.hash.replace(/^#/, '')
-  if (hash) {
-    const params = new URLSearchParams(hash)
-    const fromHash = params.get('sso')
-    if (fromHash)
-      return fromHash
-  }
-  const fromQuery = new URLSearchParams(window.location.search).get('sso')
-  return fromQuery
+  if (!hash)
+    return null
+
+  const params = new URLSearchParams(hash)
+  return params.get('sso')
 }
 
 export function stripSsoFromUrl(): void {

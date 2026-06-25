@@ -47,7 +47,7 @@ export function runMigrations(database: Database.Database, env: Env): void {
   }
 
   seedDefaultUser(database, env)
-  seedRoleUsers(database)
+  seedRoleUsers(database, env)
 }
 
 function seedDefaultUser(database: Database.Database, env: Env): void {
@@ -68,7 +68,9 @@ function seedDefaultUser(database: Database.Database, env: Env): void {
 }
 
 /** Тестовые учётки для проверки ролей (только dev; логин = пароль). */
-function seedRoleUsers(database: Database.Database): void {
+function seedRoleUsers(database: Database.Database, env: Env): void {
+  if (env.NODE_ENV === 'production')
+    return
   const findByLogin = database.prepare(
     `SELECT id FROM users WHERE login = ? COLLATE NOCASE`,
   )

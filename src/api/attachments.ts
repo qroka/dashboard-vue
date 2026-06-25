@@ -1,4 +1,4 @@
-import { apiFetch, getAuthToken } from './client'
+import { apiFetch } from './client'
 import { UPLOAD_MAX_SIZE_LABEL } from '../config/uploads'
 
 export async function uploadEventAttachment(
@@ -8,17 +8,12 @@ export async function uploadEventAttachment(
   const form = new FormData()
   form.append('file', file, file.name)
 
-  const headers = new Headers()
-  const token = getAuthToken()
-  if (token)
-    headers.set('Authorization', `Bearer ${token}`)
-
   let response: Response
   try {
     response = await fetch(`/api/events/${eventId}/attachments`, {
       method: 'POST',
-      headers,
       body: form,
+      credentials: 'include',
     })
   } catch {
     throw new Error(
@@ -61,13 +56,10 @@ export async function fetchAttachmentBlob(
   id: number,
   download = false,
 ): Promise<Blob> {
-  const headers = new Headers()
-  const token = getAuthToken()
-  if (token)
-    headers.set('Authorization', `Bearer ${token}`)
-
   const q = download ? '?download=1' : ''
-  const response = await fetch(`/api/attachments/${id}/file${q}`, { headers })
+  const response = await fetch(`/api/attachments/${id}/file${q}`, {
+    credentials: 'include',
+  })
   if (!response.ok)
     throw new Error('Не удалось получить файл')
 

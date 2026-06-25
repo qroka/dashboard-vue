@@ -8,7 +8,6 @@ import {
   type ThemePrimaryColor,
   type UserThemePreferences,
 } from '../constants/theme'
-import { getAuthToken } from '../api/client'
 import { useAuth } from './useAuth'
 
 let applyingTheme = false
@@ -45,13 +44,13 @@ export function useThemePreferences() {
   const colorMode = useColorMode()
 
   const debouncedSave = useDebounceFn(async () => {
-    if (applyingTheme || !getAuthToken() || !user.value)
+    if (applyingTheme || !user.value)
       return
     await saveUserTheme(currentThemeInput())
   }, 400)
 
   async function loadThemeFromServer(): Promise<void> {
-    if (!getAuthToken())
+    if (!user.value)
       return
     applyingTheme = true
     try {

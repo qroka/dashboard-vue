@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import {
   verifyCredentials,
@@ -6,6 +6,7 @@ import {
   toPublicUserProfile,
   upsertUserFromCrm,
 } from '../repositories/users.js'
+import type { Env } from '../config/env.js'
 import type { AuthUserPayload, LocalUser } from '../types/auth.js'
 import { getRequestIp, logActivity } from '../services/activity-log.js'
 import {
@@ -13,6 +14,8 @@ import {
   mapCrmUserToLocalFields,
   verifyCrmSsoToken,
 } from '../services/crm-auth.js'
+import { consumeSsoTokenOnce } from '../services/sso-token-store.js'
+import { clearAuthCookie, setAuthCookie } from '../utils/auth-cookie.js'
 
 const loginSchema = z.object({
   login: z.string().min(1),
@@ -29,11 +32,13 @@ function scheduleSsoSecret(env: { SCHEDULE_SSO_SECRET?: string, CRM_SYNC_SECRET:
 
 async function signInLocalUser(
   user: LocalUser,
-  reply: { jwtSign: (payload: AuthUserPayload) => Promise<string> },
+  reply: FastifyReply,
+  env: Env,
 ) {
   const profile = findUserAccessById(user.id)!
   const token = await reply.jwtSign(toJwtPayload(user))
-  return { token, user: toPublicUserProfile(profile) }
+  setAuthCookie(reply, token, env)
+  return { user: toPublicUserProfile(profile) }
 }
 
 function toJwtPayload(user: LocalUser): AuthUserPayload {
@@ -90,9 +95,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
       })
     }
 
-    const profile = findUserAccessById(user.id)!
-    const payload = toJwtPayload(user)
-    const token = await reply.jwtSign(payload)
+    const { user: publicProfile } = await signInLocalUser(user, reply, app.config.env)
 
     logActivity(app.config.env, {
       level: 'success',
@@ -107,8 +110,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
 
     return {
       success: true,
-      token,
-      user: toPublicUserProfile(profile),
+      user: publicProfile,
     }
   })
 
@@ -128,11 +130,13 @@ export const authRoutes: FastifyPluginAsync = async app => {
     },
   )
 
-  // Stateless JWT: токен остаётся валидным до expiresIn, отзыва списка нет.
   app.post(
     '/auth/logout',
     { preHandler: [app.authenticate] },
-    async () => ({ success: true }),
+    async (_request, reply) => {
+      clearAuthCookie(reply, app.config.env)
+      return { success: true }
+    },
   )
 
   /** SSO из CRM: одноразовый токен из schedule.php (#sso=...). */
@@ -142,18 +146,23 @@ export const authRoutes: FastifyPluginAsync = async app => {
       return reply.status(400).send({ success: false, error: 'Invalid request body' })
     }
 
+    const ssoToken = parsed.data.token
     const payload = verifyCrmSsoToken(
-      parsed.data.token,
+      ssoToken,
       scheduleSsoSecret(app.config.env),
     )
     if (!payload) {
       return reply.status(401).send({ success: false, error: 'Invalid or expired SSO token' })
     }
 
+    if (!consumeSsoTokenOnce(ssoToken, payload.exp)) {
+      return reply.status(401).send({ success: false, error: 'SSO token already used' })
+    }
+
     const fields = mapCrmUserToLocalFields(payload)
     const user = upsertUserFromCrm(fields)
     const ip = getRequestIp(request)
-    const { token, user: publicProfile } = await signInLocalUser(user, reply)
+    const { user: publicProfile } = await signInLocalUser(user, reply, app.config.env)
 
     logActivity(app.config.env, {
       level: 'success',
@@ -166,7 +175,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
       ipAddress: ip,
     }, request.log)
 
-    return { success: true, token, user: publicProfile }
+    return { success: true, user: publicProfile }
   })
 
   /** Проверка логина/пароля CRM (crm_lookup.php) и выдача JWT. */
@@ -186,7 +195,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
     }
     const fields = mapCrmUserToLocalFields(crmUser)
     const user = upsertUserFromCrm(fields)
-    const { token, user: publicProfile } = await signInLocalUser(user, reply)
+    const { user: publicProfile } = await signInLocalUser(user, reply, app.config.env)
 
     logActivity(app.config.env, {
       level: 'success',
@@ -199,6 +208,6 @@ export const authRoutes: FastifyPluginAsync = async app => {
       ipAddress: getRequestIp(request),
     }, request.log)
 
-    return { success: true, token, user: publicProfile }
+    return { success: true, user: publicProfile }
   })
 }

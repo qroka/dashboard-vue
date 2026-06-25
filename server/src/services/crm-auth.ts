@@ -33,7 +33,14 @@ export interface CrmSsoPayload {
   u_prem9?: number | string
   u_is_zam?: number
   u_zam_id?: number
+  /** Время выпуска (unix sec); при отсутствии проверяется exp − now ≤ 60 с. */
+  iat?: number
+  /** Уникальный id токена (опционально; replay блокируется по hash всего токена). */
+  jti?: string
 }
+
+/** Максимальный срок жизни SSO-токена с момента выпуска (сек). */
+export const SSO_MAX_AGE_SEC = 60
 
 export function mapCrmUserToRole(user: {
   u_prem1?: number | string
@@ -53,7 +60,6 @@ export function mapCrmUserToRole(user: {
   if (scheduleRole === CRM_SCHEDULE_ROLE_EXECUTOR || scheduleRole === CRM_SCHEDULE_ROLE_VIEWER)
     return 'user'
 
-  // �������������: ������ ������ ��� u_prem9, �� � ������� CRM ��������������� � prem1
   const slug = substituteSlugFromCrmUser({
     login: user.login,
     scheduleRole,
@@ -132,14 +138,23 @@ export function verifyCrmSsoToken(token: string, secret: string): CrmSsoPayload 
   try {
     const json = Buffer.from(payloadB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
     const payload = JSON.parse(json) as CrmSsoPayload
-    if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000))
+    const now = Math.floor(Date.now() / 1000)
+    if (!payload.exp || payload.exp < now)
       return null
     if (!payload.uid || !payload.login)
+      return null
+    if (isSsoTokenTooOld(payload, now))
       return null
     return payload
   } catch {
     return null
   }
+}
+
+function isSsoTokenTooOld(payload: CrmSsoPayload, nowSec: number): boolean {
+  if (payload.iat != null)
+    return nowSec - payload.iat > SSO_MAX_AGE_SEC
+  return payload.exp - nowSec > SSO_MAX_AGE_SEC
 }
 
 function hmacSha256(data: string, secret: string): Buffer {
