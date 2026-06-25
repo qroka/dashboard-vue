@@ -7,6 +7,7 @@ import {
   CRM_SCHEDULE_ROLE_DEPUTY,
   CRM_SCHEDULE_ROLE_EXECUTOR,
   CRM_SCHEDULE_ROLE_VIEWER,
+  hasScheduleAccess,
 } from '../constants/crm-schedule-access.js'
 import type { UserRole } from '../types/auth.js'
 
@@ -72,16 +73,6 @@ export function mapCrmUserToRole(user: {
   return 'user'
 }
 
-export function crmUserHasScheduleAccess(_user: {
-  u_prem9?: number | string
-  u_prem1?: number | string
-  login: string
-  u_is_zam?: number
-  u_zam_id?: number | null
-}): boolean {
-  return true
-}
-
 export function mapCrmUserToLocalFields(
   user: CrmLookupUser | CrmSsoPayload,
 ): {
@@ -142,6 +133,8 @@ export function verifyCrmSsoToken(token: string, secret: string): CrmSsoPayload 
     if (!payload.exp || payload.exp < now)
       return null
     if (!payload.uid || !payload.login)
+      return null
+    if (!hasScheduleAccess(payload.u_prem9))
       return null
     if (isSsoTokenTooOld(payload, now))
       return null
@@ -222,6 +215,10 @@ export async function lookupCrmUser(
 
   if (!data.success || !data.user)
     return { status: 'not_found' }
+
+  if (!hasScheduleAccess(data.user.u_prem9)) {
+    return { status: 'not_found' }
+  }
 
   return {
     status: 'found',

@@ -20,7 +20,18 @@ export function scheduleRoleLabel(value: number): string {
   return CRM_SCHEDULE_ROLE_LEVELS.find(l => l.value === value)?.label ?? String(value)
 }
 
-/** Любой активный пользователь CRM с полем u_prem9 (в т.ч. 0) имеет доступ к grafic. */
-export function hasScheduleAccess(_scheduleRole?: number): boolean {
-  return true
+const KNOWN_SCHEDULE_ROLES = new Set<number>([
+  CRM_SCHEDULE_ROLE_EXECUTOR,
+  CRM_SCHEDULE_ROLE_VIEWER,
+  CRM_SCHEDULE_ROLE_ADMIN,
+  CRM_SCHEDULE_ROLE_DEPUTY,
+  CRM_SCHEDULE_ROLE_ASSISTANT,
+])
+
+/** Доступ к графику: только известные значения u_prem9 (0–4). */
+export function hasScheduleAccess(scheduleRole?: number | string): boolean {
+  const role = Number(scheduleRole ?? CRM_SCHEDULE_ROLE_EXECUTOR)
+  if (!Number.isFinite(role))
+    return false
+  return KNOWN_SCHEDULE_ROLES.has(role)
 }

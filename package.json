@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "lint": "eslint src",
     "lint:server": "pnpm --filter @crm/server typecheck",
+    "test:server": "pnpm --filter @crm/server test",
     "smoke:server": "node server/scripts/smoke.mjs",
     "typecheck": "vue-tsc -p ./tsconfig.app.json && pnpm --filter @crm/server typecheck"
   },

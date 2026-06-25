@@ -76,11 +76,11 @@ async function main() {
     await waitForHealth(baseUrl)
 
     const health = await fetchJson(`${baseUrl}/api/health`)
-    if (!health.response.ok || !health.data?.service) {
+    if (!health.response.ok || health.data?.ok !== true) {
       throw new Error(`Unexpected health: ${JSON.stringify(health.data)}`)
     }
-    if (health.data.db !== undefined) {
-      throw new Error('Public health must not expose db details')
+    if (health.data.service !== undefined || health.data.db !== undefined) {
+      throw new Error('Public health must not expose internal details')
     }
 
     const loginRes = await fetchJson(`${baseUrl}/api/auth/login`, {
@@ -88,13 +88,19 @@ async function main() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ login, password }),
     })
-    if (!loginRes.response.ok || !loginRes.data?.token) {
+    if (!loginRes.response.ok || !loginRes.data?.user) {
       throw new Error(`Login failed: ${JSON.stringify(loginRes.data)}`)
     }
 
-    const token = loginRes.data.token
+    const cookieHeader = loginRes.response.headers.getSetCookie?.()
+      ?.map(part => part.split(';')[0])
+      .join('; ')
+    if (!cookieHeader) {
+      throw new Error('Login did not set auth cookie')
+    }
+
     const eventsRes = await fetchJson(`${baseUrl}/api/events`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Cookie: cookieHeader },
     })
     if (!eventsRes.response.ok || !eventsRes.data?.success) {
       throw new Error(`List events failed: ${JSON.stringify(eventsRes.data)}`)

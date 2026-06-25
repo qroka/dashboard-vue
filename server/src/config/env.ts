@@ -18,6 +18,7 @@ const envSchema = z.object({
   UPLOAD_MAX_BYTES: z.coerce.number().int().positive().default(25 * 1024 * 1024),
   SEED_USER_LOGIN: z.string().default('admin'),
   SEED_USER_PASSWORD: z.string().min(4).default('admin'),
+  SEED_USER_EMAIL: z.string().email().default('admin@local'),
   CRM_MOCK: z
     .enum(['true', 'false'])
     .default('true')
@@ -91,6 +92,12 @@ function validateProductionSecrets(data: RawEnv): void {
   if (data.SEED_USER_PASSWORD === 'admin') {
     issues.push(
       'SEED_USER_PASSWORD: в production пароль seed не может быть "admin".',
+    )
+  }
+
+  if (data.SEED_USER_EMAIL.endsWith('@local')) {
+    issues.push(
+      'SEED_USER_EMAIL: в production укажите реальный email (не *@local).',
     )
   }
 

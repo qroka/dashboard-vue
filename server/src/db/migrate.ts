@@ -64,7 +64,7 @@ function seedDefaultUser(database: Database.Database, env: Env): void {
       `INSERT INTO users (login, password_hash, name, email, role)
        VALUES (?, ?, ?, ?, 'admin')`,
     )
-    .run(env.SEED_USER_LOGIN, hash, 'Администратор CRM', 'admin@local')
+    .run(env.SEED_USER_LOGIN, hash, 'Администратор CRM', env.SEED_USER_EMAIL)
 }
 
 /** Тестовые учётки для проверки ролей (только dev; логин = пароль). */

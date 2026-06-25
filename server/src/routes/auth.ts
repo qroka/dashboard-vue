@@ -109,6 +109,7 @@ export const authRoutes: FastifyPluginAsync = async app => {
     }
 
     if (!user) {
+      // login в логе — намеренно, для аудита; журнал доступен только admin.
       logActivity(app.config.env, {
         level: 'warning',
         category: 'auth',

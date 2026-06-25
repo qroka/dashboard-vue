@@ -1,18 +1,16 @@
 import type { FastifyPluginAsync } from 'fastify'
+import rateLimit from '@fastify/rate-limit'
 import { getDbHealth } from '../services/db.js'
 
 export const healthRoutes: FastifyPluginAsync = async app => {
-  app.get('/', async () => ({
-    ok: true,
-    service: 'crm-api',
-    hint: 'Use /api/health for liveness',
-  }))
+  await app.register(rateLimit, {
+    max: 60,
+    timeWindow: '1 minute',
+  })
 
-  app.get('/health', async () => ({
-    ok: true,
-    service: 'crm-api',
-    timestamp: new Date().toISOString(),
-  }))
+  app.get('/', async () => ({ ok: true }))
+
+  app.get('/health', async () => ({ ok: true }))
 
   app.get(
     '/health/detailed',
