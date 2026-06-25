@@ -653,14 +653,14 @@ function cancelDeleteEvent() {
         <div v-else-if="view === 'board'" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             ref="boardScrollRef"
-            class="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto overflow-y-hidden p-px pb-2 sm:gap-4"
+            class="flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden p-px pb-2 sm:gap-4"
             :class="isBoardScrollDragging ? 'cursor-grabbing select-none' : 'cursor-grab'"
             @mousedown="onBoardScrollMouseDown"
           >
             <div
               v-for="col in boardColumns"
               :key="col.block.id"
-              class="flex h-fit w-[min(19rem,calc(100vw-2.5rem))] shrink-0 flex-col self-start overflow-hidden rounded-lg border border-default bg-elevated/50 dark:bg-elevated/20"
+              class="flex min-h-0 w-[min(19rem,calc(100vw-2.5rem))] shrink-0 flex-col overflow-hidden rounded-lg border border-default bg-elevated/50 dark:bg-elevated/20"
             >
               <div class="flex shrink-0 items-center gap-3 border-b border-default px-3.5 py-3 sm:px-4">
                 <div
@@ -704,7 +704,7 @@ function cancelDeleteEvent() {
                 />
               </div>
 
-              <div class="flex flex-col">
+              <div class="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
                 <UEmpty
                   v-if="!col.cards.length"
                   size="sm"
