@@ -16,6 +16,7 @@
     "typecheck": "vue-tsc -p ./tsconfig.app.json && pnpm --filter @crm/server typecheck"
   },
   "dependencies": {
+    "@fontsource/public-sans": "^5.2.7",
     "@internationalized/date": "^3.12.1",
     "@nuxt/ui": "^4.7.1",
     "@tanstack/table-core": "^8.21.3",

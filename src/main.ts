@@ -17,6 +17,8 @@ const app = createApp(App)
 
 clearLegacyAuthToken()
 
+const { fetchMe } = useAuth()
+
 let ssoBootstrap: Promise<void> = Promise.resolve()
 const ssoToken = consumeSsoTokenFromUrl()
 if (ssoToken) {
@@ -27,6 +29,11 @@ if (ssoToken) {
       stripSsoFromUrl()
     })
 }
+
+/** Проверка сессии стартует сразу, не ждёт первого перехода роутера. */
+const authBootstrap = ssoToken
+  ? ssoBootstrap.then(() => fetchMe())
+  : fetchMe()
 
 const head = createHead()
 const router = createRouter({
@@ -46,13 +53,10 @@ setUnauthorizedHandler(() => {
 })
 
 router.beforeEach(async (to) => {
-  await ssoBootstrap
+  await authBootstrap
 
   const isPublic = Boolean(to.meta.public)
-  const { fetchMe, ready, user, canViewLogs } = useAuth()
-
-  if (!ready.value)
-    await fetchMe()
+  const { user, canViewLogs } = useAuth()
 
   const authenticated = Boolean(user.value)
 
