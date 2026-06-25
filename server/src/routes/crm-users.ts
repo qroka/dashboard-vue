@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { CRM_PERMISSION_MODULES } from '../constants/crm-user-fields.js'
+import { CrmDbWriteDisabledError } from '../services/crm-db-policy.js'
 import { CrmUsersService } from '../services/crm-users.js'
 
 const permissionSchema = z.object({
@@ -137,6 +138,9 @@ export const crmUsersRoutes: FastifyPluginAsync = async app => {
         const user = await crmUsers.create(parsed.data)
         return reply.status(201).send({ success: true, user })
       } catch (error) {
+        if (error instanceof CrmDbWriteDisabledError) {
+          return reply.status(403).send({ success: false, error: error.message })
+        }
         const message = error instanceof Error ? error.message : 'Failed to create user'
         return reply.status(502).send({ success: false, error: message })
       }
@@ -168,6 +172,9 @@ export const crmUsersRoutes: FastifyPluginAsync = async app => {
         }
         return { success: true, user }
       } catch (error) {
+        if (error instanceof CrmDbWriteDisabledError) {
+          return reply.status(403).send({ success: false, error: error.message })
+        }
         const message = error instanceof Error ? error.message : 'Failed to update user'
         return reply.status(502).send({ success: false, error: message })
       }

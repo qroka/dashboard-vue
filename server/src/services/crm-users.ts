@@ -1,4 +1,5 @@
 import type { Env } from '../config/env.js'
+import { CrmDbWriteDisabledError } from './crm-db-policy.js'
 import {
   CRM_ACCESS_LEVELS,
   CRM_ACTIVE_LEVELS,
@@ -24,6 +25,11 @@ let pool: MysqlPool | null = null
 
 function useMysql(env: Env): boolean {
   return !env.CRM_MOCK && Boolean(env.CRM_DB_HOST && env.CRM_DB_USER && env.CRM_DB_NAME)
+}
+
+function assertCrmMysqlWritable(env: Env): void {
+  if (useMysql(env) && !env.CRM_DB_WRITABLE)
+    throw new CrmDbWriteDisabledError()
 }
 
 async function getPool(env: Env): Promise<MysqlPool> {
@@ -276,6 +282,7 @@ export class CrmUsersService {
   }
 
   private async createMysql(input: CreateCrmUserInput): Promise<CrmUserRecord> {
+    assertCrmMysqlWritable(this.env)
     const permissions = { ...emptyCrmPermissions(), ...input.permissions }
     const db = await getPool(this.env)
     const [result] = await db.query(
@@ -314,6 +321,7 @@ export class CrmUsersService {
     id: number,
     input: UpdateCrmUserInput,
   ): Promise<CrmUserRecord | null> {
+    assertCrmMysqlWritable(this.env)
     const { sets, params } = buildUpdateSets(input)
     if (!sets.length)
       return this.getByIdMysql(id, true)

@@ -49,9 +49,30 @@ const envSchema = z.object({
   MAIL_BLACKLIST: z.string().default(''),
   /** Пусто — авто-поиск (/usr/sbin/sendmail, /usr/bin/sendmail, which sendmail). */
   MAIL_SENDMAIL_PATH: z.string().default(''),
+  /** Логины break-glass для локального входа при недоступности CRM (через запятую). */
+  LOCAL_AUTH_LOGINS: z.string().optional(),
+  /** Прямая запись в CRM MySQL (INSERT/UPDATE user). По умолчанию false в production. */
+  CRM_DB_WRITABLE: z.enum(['true', 'false']).optional(),
 })
 
-export type Env = z.infer<typeof envSchema>
+type RawEnv = z.infer<typeof envSchema>
+
+export type Env = Omit<RawEnv, 'CRM_DB_WRITABLE'> & {
+  CRM_DB_WRITABLE: boolean
+}
+
+function finalizeEnv(data: RawEnv): Env {
+  const crmDbWritable = data.CRM_DB_WRITABLE === 'true'
+    ? true
+    : data.CRM_DB_WRITABLE === 'false'
+      ? false
+      : data.CRM_MOCK
+
+  return {
+    ...data,
+    CRM_DB_WRITABLE: crmDbWritable,
+  }
+}
 
 function validateProductionSecrets(data: z.infer<typeof envSchema>): void {
   if (data.NODE_ENV !== 'production')
@@ -85,5 +106,5 @@ export function loadEnv(): Env {
   }
 
   validateProductionSecrets(parsed.data)
-  return parsed.data
+  return finalizeEnv(parsed.data)
 }

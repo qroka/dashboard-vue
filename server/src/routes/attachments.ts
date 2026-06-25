@@ -10,6 +10,8 @@ import {
 import {
   assertAllowedUpload,
   openStoredFile,
+  safeAttachmentContentType,
+  UploadTooLargeError,
   UploadValidationError,
 } from '../services/file-storage.js'
 import {
@@ -54,10 +56,6 @@ export const attachmentsRoutes: FastifyPluginAsync = async app => {
         }
 
         uploadFileName = file.filename
-        const buffer = await file.toBuffer()
-        if (!buffer.length) {
-          return reply.status(400).send({ success: false, error: 'Empty file' })
-        }
 
         try {
           assertAllowedUpload(file.mimetype, file.filename)
@@ -73,7 +71,8 @@ export const attachmentsRoutes: FastifyPluginAsync = async app => {
           eventId,
           file.filename,
           file.mimetype,
-          buffer,
+          file.file,
+          app.config.env.UPLOAD_MAX_BYTES,
         )
 
         const actor = jwtActor(request)
@@ -107,8 +106,11 @@ export const attachmentsRoutes: FastifyPluginAsync = async app => {
           },
         })
       } catch (error) {
+        if (error instanceof UploadValidationError) {
+          return reply.status(400).send({ success: false, error: error.message })
+        }
         const err = error as { code?: string, message?: string }
-        if (err.code === 'FST_REQ_FILE_TOO_LARGE') {
+        if (error instanceof UploadTooLargeError || err.code === 'FST_REQ_FILE_TOO_LARGE') {
           const eventId = Number((request.params as { eventId: string }).eventId)
           const event = Number.isInteger(eventId) ? findEventById(eventId) : null
           const actor = jwtActor(request)
@@ -138,7 +140,7 @@ export const attachmentsRoutes: FastifyPluginAsync = async app => {
         app.log.error(error)
         return reply.status(500).send({
           success: false,
-          error: err.message ?? 'Upload failed',
+          error: 'Upload failed',
         })
       }
     },
@@ -177,7 +179,8 @@ export const attachmentsRoutes: FastifyPluginAsync = async app => {
         : 'inline'
 
       return reply
-        .header('Content-Type', attachment.mimeType)
+        .header('Content-Type', safeAttachmentContentType(attachment.mimeType))
+        .header('X-Content-Type-Options', 'nosniff')
         .header(
           'Content-Disposition',
           `${disposition}; filename*=UTF-8''${encodeURIComponent(attachment.name)}`,

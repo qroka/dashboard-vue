@@ -4,7 +4,7 @@ import {
   buildStorageKey,
   deleteStoredFile,
   formatFileSizeLabel,
-  saveUploadedFile,
+  saveUploadedFileStream,
 } from '../services/file-storage.js'
 
 export interface AttachmentRecord {
@@ -88,12 +88,26 @@ export async function addAttachmentFromUpload(
   eventId: number,
   originalName: string,
   mimeType: string,
-  buffer: Buffer,
+  stream: NodeJS.ReadableStream,
+  maxBytes: number,
 ): Promise<AttachmentRecord> {
   const storageKey = buildStorageKey(eventId, originalName)
-  await saveUploadedFile(env, storageKey, buffer)
 
-  const sizeBytes = buffer.length
+  let sizeBytes = 0
+  let head: Buffer = Buffer.alloc(0)
+
+  try {
+    const saved = await saveUploadedFileStream(env, storageKey, stream, maxBytes)
+    sizeBytes = saved.sizeBytes
+    head = saved.head
+
+    const { assertAllowedUploadContent } = await import('../services/file-storage.js')
+    await assertAllowedUploadContent(head, mimeType, originalName)
+  } catch (error) {
+    await deleteStoredFile(env, storageKey)
+    throw error
+  }
+
   const sizeLabel = formatFileSizeLabel(sizeBytes)
   const result = getDb()
     .prepare(

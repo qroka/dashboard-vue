@@ -10,12 +10,13 @@ import type { Env } from '../config/env.js'
 import type { AuthUserPayload, LocalUser } from '../types/auth.js'
 import { getRequestIp, logActivity } from '../services/activity-log.js'
 import {
-  fetchCrmLookupUser,
+  lookupCrmUser,
   mapCrmUserToLocalFields,
   verifyCrmSsoToken,
 } from '../services/crm-auth.js'
 import { consumeSsoTokenOnce } from '../services/sso-token-store.js'
 import { clearAuthCookie, setAuthCookie } from '../utils/auth-cookie.js'
+import { canUseLocalAuth, isCrmAuthRequired } from '../utils/local-auth-policy.js'
 
 const loginSchema = z.object({
   login: z.string().min(1),
@@ -52,6 +53,33 @@ function toJwtPayload(user: LocalUser): AuthUserPayload {
   }
 }
 
+async function resolveLoginUser(
+  env: Env,
+  login: string,
+  password: string,
+): Promise<{ user: LocalUser | null, viaCrm: boolean, crmUnavailable: boolean }> {
+  const lookup = await lookupCrmUser(env, login, password)
+
+  if (lookup.status === 'found') {
+    return {
+      user: upsertUserFromCrm(mapCrmUserToLocalFields(lookup.user)),
+      viaCrm: true,
+      crmUnavailable: false,
+    }
+  }
+
+  if (lookup.status === 'unavailable' && isCrmAuthRequired(env) && !canUseLocalAuth(env, login)) {
+    return { user: null, viaCrm: false, crmUnavailable: true }
+  }
+
+  if (!canUseLocalAuth(env, login)) {
+    return { user: null, viaCrm: false, crmUnavailable: false }
+  }
+
+  const user = await verifyCredentials(login, password)
+  return { user, viaCrm: false, crmUnavailable: lookup.status === 'unavailable' }
+}
+
 export const authRoutes: FastifyPluginAsync = async app => {
   app.post('/auth/login', async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body)
@@ -64,20 +92,17 @@ export const authRoutes: FastifyPluginAsync = async app => {
     }
 
     const ip = getRequestIp(request)
-    let user: LocalUser | null = null
-    let viaCrm = false
-
-    // CRM — источник роли (u_prem9); иначе остаётся старая роль в SQLite (например admin).
-    const crmUser = await fetchCrmLookupUser(
+    const { user, viaCrm, crmUnavailable } = await resolveLoginUser(
       app.config.env,
       parsed.data.login,
       parsed.data.password,
     )
-    if (crmUser) {
-      user = upsertUserFromCrm(mapCrmUserToLocalFields(crmUser))
-      viaCrm = true
-    } else {
-      user = await verifyCredentials(parsed.data.login, parsed.data.password)
+
+    if (crmUnavailable) {
+      return reply.status(503).send({
+        success: false,
+        error: 'CRM authentication service unavailable',
+      })
     }
 
     if (!user) {
@@ -185,15 +210,24 @@ export const authRoutes: FastifyPluginAsync = async app => {
       return reply.status(400).send({ success: false, error: 'Invalid request body' })
     }
 
-    const crmUser = await fetchCrmLookupUser(
+    const lookup = await lookupCrmUser(
       app.config.env,
       parsed.data.login,
       parsed.data.password,
     )
-    if (!crmUser) {
+
+    if (lookup.status === 'unavailable' && isCrmAuthRequired(app.config.env)) {
+      return reply.status(503).send({
+        success: false,
+        error: 'CRM authentication service unavailable',
+      })
+    }
+
+    if (lookup.status !== 'found') {
       return reply.status(401).send({ success: false, error: 'Invalid login or password' })
     }
-    const fields = mapCrmUserToLocalFields(crmUser)
+
+    const fields = mapCrmUserToLocalFields(lookup.user)
     const user = upsertUserFromCrm(fields)
     const { user: publicProfile } = await signInLocalUser(user, reply, app.config.env)
 

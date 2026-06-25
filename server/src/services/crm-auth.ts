@@ -173,14 +173,20 @@ function timingSafeEqualString(a: string, b: string): boolean {
   return cryptoTimingSafeEqual(ba, bb)
 }
 
-export async function fetchCrmLookupUser(
+export type CrmLookupResult =
+  | { status: 'found', user: CrmLookupUser }
+  | { status: 'not_found' }
+  | { status: 'unavailable' }
+  | { status: 'not_configured' }
+
+export async function lookupCrmUser(
   env: Env,
   login: string,
   password: string,
-): Promise<CrmLookupUser | null> {
+): Promise<CrmLookupResult> {
   const url = env.CRM_LOOKUP_URL
   if (!url)
-    return null
+    return { status: 'not_configured' }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -189,32 +195,55 @@ export async function fetchCrmLookupUser(
   if (env.CRM_HOST_HEADER)
     headers.Host = env.CRM_HOST_HEADER
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ login, password }),
-    signal: AbortSignal.timeout(env.CRM_TIMEOUT_MS),
-  })
+  let response: Response
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ login, password }),
+      signal: AbortSignal.timeout(env.CRM_TIMEOUT_MS),
+    })
+  } catch {
+    return { status: 'unavailable' }
+  }
+
+  if (response.status >= 500)
+    return { status: 'unavailable' }
 
   if (!response.ok)
-    return null
+    return { status: 'not_found' }
 
-  const data = (await response.json()) as {
-    success?: boolean
-    user?: CrmLookupUser & { id?: number }
+  let data: { success?: boolean, user?: CrmLookupUser & { id?: number } }
+  try {
+    data = (await response.json()) as typeof data
+  } catch {
+    return { status: 'unavailable' }
   }
+
   if (!data.success || !data.user)
-    return null
+    return { status: 'not_found' }
 
   return {
-    id: data.user.id,
-    login: data.user.login,
-    password: data.user.password,
-    fio: data.user.fio,
-    email: data.user.email,
-    u_prem1: data.user.u_prem1,
-    u_prem9: data.user.u_prem9,
-    u_is_zam: data.user.u_is_zam,
-    u_zam_id: data.user.u_zam_id,
+    status: 'found',
+    user: {
+      id: data.user.id,
+      login: data.user.login,
+      password: data.user.password,
+      fio: data.user.fio,
+      email: data.user.email,
+      u_prem1: data.user.u_prem1,
+      u_prem9: data.user.u_prem9,
+      u_is_zam: data.user.u_is_zam,
+      u_zam_id: data.user.u_zam_id,
+    },
   }
+}
+
+export async function fetchCrmLookupUser(
+  env: Env,
+  login: string,
+  password: string,
+): Promise<CrmLookupUser | null> {
+  const result = await lookupCrmUser(env, login, password)
+  return result.status === 'found' ? result.user : null
 }
