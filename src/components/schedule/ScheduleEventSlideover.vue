@@ -15,6 +15,7 @@ import {
   scheduleParticipantKey,
   isScheduleRowViewRestricted,
   isScheduleRowAttachmentsHiddenForOthers,
+  isScheduleRowCancelled,
   formatScheduleRowTime,
   type SchedulePlaceQuickOption,
 } from '../../utils/schedule'
@@ -37,6 +38,7 @@ import ScheduleParticipantPopoverChip from './ScheduleParticipantPopoverChip.vue
 import ScheduleParticipantsField from './ScheduleParticipantsField.vue'
 import SchedulePlaceField from './SchedulePlaceField.vue'
 import ScheduleTimePicker from './ScheduleTimePicker.vue'
+import ScheduleCancelledBadge from './ScheduleCancelledBadge.vue'
 import ScheduleHiddenBadge from './ScheduleHiddenBadge.vue'
 import ScheduleHiddenEventLabel from './ScheduleHiddenEventLabel.vue'
 import ScheduleHiddenAttachmentsBadge from './ScheduleHiddenAttachmentsBadge.vue'
@@ -414,9 +416,15 @@ function onCancelEdit() {
                 <p class="text-xs text-dimmed">
                   Место
                 </p>
-                <p class="mt-1 text-sm font-medium text-default">
-                  {{ draft.address || '—' }}
-                </p>
+                <div class="mt-1 flex flex-col gap-1.5">
+                  <ScheduleCancelledBadge
+                    v-if="isScheduleRowCancelled(selection.row)"
+                    variant="table"
+                  />
+                  <p class="text-sm font-medium text-default">
+                    {{ draft.address || '—' }}
+                  </p>
+                </div>
               </div>
             </UCard>
           </div>

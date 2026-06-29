@@ -9,6 +9,7 @@ import {
   scheduleNavbarHeading,
   scheduleTitleOptions,
   scheduleAttachmentsColumnWidth,
+  scheduleTimeColumnWidth,
 } from '../../config/schedule'
 import { useParticipants } from '../../composables/useParticipants'
 import { useDragScroll } from '../../composables/useDragScroll'
@@ -38,6 +39,7 @@ import {
   formatScheduleRowTime,
   personAvatarChip,
   isScheduleRowAllDay,
+  isScheduleRowCancelled,
   isScheduleRowViewRestricted,
   isScheduleRowAttachmentsHiddenForOthers,
   buildScheduleDayBlockHeading,
@@ -53,6 +55,7 @@ import {
 import ScheduleArchivePopover from './ScheduleArchivePopover.vue'
 import ScheduleAttachmentsPopover from './ScheduleAttachmentsPopover.vue'
 import ScheduleEventSlideover from './ScheduleEventSlideover.vue'
+import ScheduleCancelledBadge from './ScheduleCancelledBadge.vue'
 import ScheduleHiddenBadge from './ScheduleHiddenBadge.vue'
 import ScheduleHiddenAttachmentsBadge from './ScheduleHiddenAttachmentsBadge.vue'
 import ScheduleHiddenEventLabel from './ScheduleHiddenEventLabel.vue'
@@ -76,7 +79,7 @@ interface ScheduleBoardColumn {
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const { loadBlocks, saveEvent, deleteEvent, loading: scheduleLoading, error: scheduleError, events: scheduleEvents } = useScheduleApi()
+const { loadBlocks, saveEvent, deleteEvent, setEventCancelled, loading: scheduleLoading, error: scheduleError, events: scheduleEvents } = useScheduleApi()
 const { participants: crmParticipants, load: loadParticipants } = useParticipants()
 const { canEditSchedule, canEditSubstituteSlug } = usePermissions()
 
@@ -122,6 +125,10 @@ const canCreateEvents = computed(() =>
   canEditSchedule(substituteSlug.value),
 )
 
+const showScheduleRowActions = computed(() =>
+  !isScheduleGeneralView.value && canCreateEvents.value,
+)
+
 function canEditGroup(group: ScheduleUserGroup): boolean {
   return !isScheduleGeneralView.value && canEditSubstituteSlug(group.substituteKey)
 }
@@ -129,15 +136,24 @@ function canEditGroup(group: ScheduleUserGroup): boolean {
 const substituteSlug = computed(() =>
   isScheduleGeneralView.value ? null : scope.value as ScheduleSubstituteSlug)
 
-const scheduleGridTemplate = computed(() =>
-  isScheduleGeneralView.value
-    ? `77px 200px 256px 1fr 1fr ${scheduleAttachmentsColumnWidth}`
-    : `77px 256px 1fr 1fr ${scheduleAttachmentsColumnWidth} 52px`)
+const scheduleGridTemplate = computed(() => {
+  if (isScheduleGeneralView.value)
+    return `${scheduleTimeColumnWidth} 200px 256px 1fr 1fr ${scheduleAttachmentsColumnWidth}`
+  const base = `${scheduleTimeColumnWidth} 256px 1fr 1fr ${scheduleAttachmentsColumnWidth}`
+  return showScheduleRowActions.value ? `${base} 52px` : base
+})
 
-/** Объединение колонок «место … приложения» для скрытого мероприятия без доступа к деталям. */
-function hiddenEventDetailsGridColumn(generalView: boolean): string {
-  return generalView ? '3 / 7' : '2 / 6'
-}
+const hiddenEventDetailsGridColumn = computed(() => {
+  if (isScheduleGeneralView.value)
+    return '3 / 7'
+  return showScheduleRowActions.value ? '2 / 6' : '2 / 5'
+})
+
+const scheduleListMinWidth = computed(() => {
+  if (isScheduleGeneralView.value)
+    return '1335px'
+  return showScheduleRowActions.value ? '1195px' : '1143px'
+})
 
 const visibleBlocks = computed(() =>
   filterScheduleBySubstitute(scheduleBlocks.value, scope.value))
@@ -575,7 +591,8 @@ function rowContextMenuItems(
 ): DropdownMenuItem[][] {
   if (!canEditGroup(group))
     return []
-  return [[
+
+  const items: DropdownMenuItem[] = [
     {
       label: 'Редактировать',
       icon: 'i-lucide-pencil',
@@ -590,15 +607,37 @@ function rowContextMenuItems(
         onCopyEvent(block, group, row)
       }
     },
-    {
-      label: 'Удалить',
-      icon: 'i-lucide-trash-2',
-      color: 'error',
+  ]
+
+  if (isScheduleRowCancelled(row)) {
+    items.push({
+      label: 'Восстановить мероприятие',
+      icon: 'i-lucide-calendar-check',
       onSelect() {
-        onRequestDelete(block, group, row)
+        onRestoreEvent(block, group, row)
       }
+    })
+  }
+  else {
+    items.push({
+      label: 'Отменить мероприятие',
+      icon: 'i-lucide-calendar-x',
+      onSelect() {
+        onCancelEvent(block, group, row)
+      }
+    })
+  }
+
+  items.push({
+    label: 'Удалить',
+    icon: 'i-lucide-trash-2',
+    color: 'error',
+    onSelect() {
+      onRequestDelete(block, group, row)
     }
-  ]]
+  })
+
+  return [items]
 }
 
 function onEditEvent(block: ScheduleDateBlock, group: ScheduleUserGroup, row: ScheduleRow) {
@@ -611,6 +650,50 @@ function onEditEvent(block: ScheduleDateBlock, group: ScheduleUserGroup, row: Sc
 function onRequestDelete(block: ScheduleDateBlock, group: ScheduleUserGroup, row: ScheduleRow) {
   deletePending.value = { block, group, row }
   deleteModalOpen.value = true
+}
+
+async function onCancelEvent(block: ScheduleDateBlock, group: ScheduleUserGroup, row: ScheduleRow) {
+  if (!canEditGroup(group) || !row.apiId || isScheduleRowCancelled(row))
+    return
+  try {
+    const saved = await setEventCancelled(row, true)
+    Object.assign(row, saved)
+    if (eventSelection.value?.row === row)
+      eventSelection.value = { block, group, row }
+    await refreshSchedule()
+    toast.add({
+      title: 'Мероприятие отменено',
+      color: 'success',
+    })
+  } catch (e) {
+    toast.add({
+      title: 'Не удалось отменить мероприятие',
+      description: e instanceof Error ? e.message : undefined,
+      color: 'error',
+    })
+  }
+}
+
+async function onRestoreEvent(block: ScheduleDateBlock, group: ScheduleUserGroup, row: ScheduleRow) {
+  if (!canEditGroup(group) || !row.apiId || !isScheduleRowCancelled(row))
+    return
+  try {
+    const saved = await setEventCancelled(row, false)
+    Object.assign(row, saved)
+    if (eventSelection.value?.row === row)
+      eventSelection.value = { block, group, row }
+    await refreshSchedule()
+    toast.add({
+      title: 'Мероприятие восстановлено',
+      color: 'success',
+    })
+  } catch (e) {
+    toast.add({
+      title: 'Не удалось восстановить мероприятие',
+      description: e instanceof Error ? e.message : undefined,
+      color: 'error',
+    })
+  }
 }
 
 async function confirmDeleteEvent() {
@@ -867,7 +950,11 @@ function cancelDeleteEvent() {
                         :label="formatScheduleRowTime(c.row)"
                         class="shrink-0 tabular-nums"
                       />
-                      <div class="ms-auto shrink-0 opacity-70 transition-opacity group-hover:opacity-100" @click.stop>
+                      <div
+                        v-if="showScheduleRowActions"
+                        class="ms-auto shrink-0 opacity-70 transition-opacity group-hover:opacity-100"
+                        @click.stop
+                      >
                         <UDropdownMenu
                           v-if="rowContextMenuItems(c.block, c.group, c.row).length"
                           :items="rowContextMenuItems(c.block, c.group, c.row)"
@@ -909,13 +996,19 @@ function cancelDeleteEvent() {
                         </span>
                       </p>
 
-                      <p
-                        v-if="formatSchedulePlace(c.row)"
+                      <div
+                        v-if="isScheduleRowCancelled(c.row) || formatSchedulePlace(c.row)"
                         class="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted"
                       >
-                        <UIcon name="i-lucide-map-pin" class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                        <span class="line-clamp-2 min-w-0">{{ formatSchedulePlace(c.row) }}</span>
-                      </p>
+                        <ScheduleCancelledBadge
+                          v-if="isScheduleRowCancelled(c.row)"
+                          variant="board"
+                        />
+                        <template v-else>
+                          <UIcon name="i-lucide-map-pin" class="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                          <span class="line-clamp-2 min-w-0">{{ formatSchedulePlace(c.row) }}</span>
+                        </template>
+                      </div>
 
                       <div
                         v-if="c.row.participants.length || c.row.attachmentFiles.length"
@@ -963,33 +1056,54 @@ function cancelDeleteEvent() {
         </div>
 
         <div v-else class="min-h-0 min-w-0 flex-1 overflow-auto rounded-t-lg border border-default bg-default">
-          <div :class="isScheduleGeneralView ? 'min-w-[1300px]' : 'min-w-[1160px]'">
+          <div :style="{ minWidth: scheduleListMinWidth }">
             <div
               class="sticky top-0 z-20 grid rounded-t-lg border-b border-default bg-default text-sm font-medium text-default"
               :style="{ gridTemplateColumns: scheduleGridTemplate }">
-              <div class="border-default flex h-12 items-center border-r px-1.5 py-3.5">
-                <span class="rounded-md px-2.5 py-1.5">Время</span>
+              <div class="border-default flex h-12 items-center justify-center border-r px-1.5 py-3.5">
+                <span class="inline-flex items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5">
+                  <UIcon name="i-lucide-clock" class="size-5 shrink-0 text-dimmed" aria-hidden="true" />
+                  Время
+                </span>
               </div>
               <div
                 v-if="isScheduleGeneralView"
                 class="border-default flex h-12 items-center border-r px-1.5 py-3.5"
               >
-                <span class="rounded-md px-2.5 py-1.5">Руководитель</span>
+                <span class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5">
+                  <UIcon name="i-lucide-user-round" class="size-5 shrink-0 text-dimmed" aria-hidden="true" />
+                  Руководитель
+                </span>
               </div>
               <div class="border-default flex h-12 items-center border-r px-1.5 py-3.5">
-                <span class="rounded-md px-2.5 py-1.5">Место</span>
+                <span class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5">
+                  <UIcon name="i-lucide-map-pin" class="size-5 shrink-0 text-dimmed" aria-hidden="true" />
+                  Место
+                </span>
               </div>
               <div class="border-default flex h-12 items-center border-r px-1.5 py-3.5">
-                <span class="rounded-md px-2.5 py-1.5">Тема</span>
+                <span class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5">
+                  <UIcon name="i-lucide-text" class="size-5 shrink-0 text-dimmed" aria-hidden="true" />
+                  Тема
+                </span>
               </div>
               <div class="border-default flex h-12 items-center border-r px-1.5 py-3.5">
-                <span class="rounded-md px-2.5 py-1.5">Участники</span>
+                <span class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5">
+                  <UIcon name="i-lucide-users" class="size-5 shrink-0 text-dimmed" aria-hidden="true" />
+                  Участники
+                </span>
               </div>
               <div class="border-default flex h-12 items-center justify-center border-r px-1.5 py-3.5">
-                <span class="rounded-md px-2.5 py-1.5 text-center">Приложения</span>
+                <span class="inline-flex items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-center">
+                  <UIcon name="i-lucide-paperclip" class="size-5 shrink-0 text-dimmed" aria-hidden="true" />
+                  Приложения
+                </span>
               </div>
-              <div v-if="!isScheduleGeneralView" class="border-default flex h-12 items-center justify-center px-1"
-                aria-hidden="true" />
+              <div
+                v-if="showScheduleRowActions"
+                class="border-default flex h-12 items-center justify-center px-1"
+                aria-hidden="true"
+              />
             </div>
 
             <template
@@ -1024,9 +1138,9 @@ function cancelDeleteEvent() {
                     v-if="dayEventCount(block)"
                     color="neutral"
                     variant="subtle"
-                    size="sm"
+                    size="md"
                     :label="String(dayEventCount(block))"
-                    class="ms-auto tabular-nums"
+                    class="ms-auto justify-center font-semibold tabular-nums"
                   />
                 </UButton>
               </template>
@@ -1041,12 +1155,14 @@ function cancelDeleteEvent() {
                       'grid cursor-pointer border-b border-default transition-colors hover:bg-elevated/40',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30',
                       isScheduleGeneralView && accentSurfaceClass(entry.group.accent),
+                      isScheduleRowCancelled(entry.row) && 'bg-elevated/20 opacity-80',
                     ]" :style="{ gridTemplateColumns: scheduleGridTemplate }" role="button" tabindex="0"
                       @click="onScheduleRowActivate(block, entry.group, entry.row)"
                       @keydown.enter.prevent="onScheduleRowActivate(block, entry.group, entry.row)"
                       @keydown.space.prevent="onScheduleRowActivate(block, entry.group, entry.row)">
                       <div
-                        class="flex min-h-[100px] flex-col justify-center border-r border-default p-4 text-sm text-default">
+                        class="flex min-h-[100px] flex-col items-center justify-center border-r border-default p-3 text-center text-default"
+                      >
                         <span
                           class="tabular-nums"
                           :class="{ 'text-default': !isScheduleRowAllDay(entry.row) }"
@@ -1063,7 +1179,7 @@ function cancelDeleteEvent() {
                         </div>
                         <div
                           class="flex min-h-[100px] items-center border-r border-default p-4"
-                          :style="{ gridColumn: hiddenEventDetailsGridColumn(isScheduleGeneralView) }"
+                          :style="{ gridColumn: hiddenEventDetailsGridColumn }"
                         >
                           <ScheduleHiddenEventLabel />
                         </div>
@@ -1078,9 +1194,16 @@ function cancelDeleteEvent() {
                           <span class="min-w-0 text-sm font-medium leading-snug text-default">{{ entry.group.name }}</span>
                         </div>
                         <div
-                          class="flex min-h-[100px] items-center border-r border-default p-4 text-sm leading-5 text-default"
+                          class="flex min-h-[100px] flex-col justify-center gap-1.5 border-r border-default p-4 text-sm leading-5 text-default"
                         >
-                          <span class="min-w-0 whitespace-normal wrap-break-word">{{ formatSchedulePlace(entry.row) }}</span>
+                          <ScheduleCancelledBadge
+                            v-if="isScheduleRowCancelled(entry.row)"
+                            variant="table"
+                          />
+                          <span
+                            v-if="formatSchedulePlace(entry.row)"
+                            class="min-w-0 whitespace-normal wrap-break-word"
+                          >{{ formatSchedulePlace(entry.row) }}</span>
                         </div>
                         <div
                           class="flex min-h-[100px] flex-col items-start justify-center gap-2 border-r border-default p-4 text-sm leading-5 text-default"
@@ -1119,8 +1242,11 @@ function cancelDeleteEvent() {
                           />
                         </div>
                       </template>
-                      <div v-if="!isScheduleGeneralView"
-                        class="flex min-h-[100px] items-center justify-center border-default p-1" @click.stop>
+                      <div
+                        v-if="showScheduleRowActions"
+                        class="flex min-h-[100px] items-center justify-center border-default p-1"
+                        @click.stop
+                      >
                         <UDropdownMenu
                           v-if="rowContextMenuItems(block, entry.group, entry.row).length"
                           :items="rowContextMenuItems(block, entry.group, entry.row)"

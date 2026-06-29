@@ -26,6 +26,7 @@ const FIELD_LABELS: Record<string, string> = {
   topic: 'Тема',
   hidden: 'Скрыто',
   attachmentsHidden: 'Скрыть файлы',
+  cancelled: 'Отменено',
   participants: 'Участники',
   attachments: 'Файлы',
 }
@@ -47,6 +48,7 @@ const TRACKED_KEYS = [
   'topic',
   'hidden',
   'attachmentsHidden',
+  'cancelled',
 ] as const
 
 type TrackedKey = (typeof TRACKED_KEYS)[number]
@@ -89,6 +91,8 @@ function snapshotValue(key: TrackedKey, event: EventRecord): string {
       return formatBool(event.hidden, 'Да', 'Нет')
     case 'attachmentsHidden':
       return formatBool(event.attachmentsHidden, 'Да', 'Нет')
+    case 'cancelled':
+      return formatBool(event.cancelled, 'Да', 'Нет')
     default:
       return '—'
   }

@@ -2,6 +2,7 @@ export type NotificationType =
   | 'event.added'
   | 'event.removed'
   | 'event.cancelled'
+  | 'event.restored'
   | 'event.updated'
   | 'event.reminder'
 

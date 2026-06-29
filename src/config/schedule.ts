@@ -8,6 +8,9 @@ import type {
 } from '../types/schedule'
 import { scheduleSubstituteSlugs } from '../types/schedule'
 
+/** Ширина колонки «Время» в таблице — подпись «Весь день» и заголовок с иконкой. */
+export const scheduleTimeColumnWidth = '112px'
+
 /** Ширина колонки «Приложения» в таблице — под бейдж «Скрытые файлы». */
 export const scheduleAttachmentsColumnWidth = '160px'
 

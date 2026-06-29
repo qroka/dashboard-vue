@@ -159,6 +159,19 @@ export function useScheduleApi() {
     await apiFetch(`/api/events/${row.apiId}`, { method: 'DELETE' })
   }
 
+  async function setEventCancelled(row: ScheduleRow, cancelled: boolean): Promise<ScheduleRow> {
+    if (!row.apiId)
+      throw new Error('Мероприятие не сохранено')
+
+    const patchRes = await apiFetch<{ success: boolean, event: ApiEvent }>(
+      `/api/events/${row.apiId}`,
+      { method: 'PATCH', body: JSON.stringify({ cancelled }) },
+    )
+    if (!patchRes.event)
+      throw new Error(cancelled ? 'Не удалось отменить мероприятие' : 'Не удалось восстановить мероприятие')
+    return apiEventToScheduleRow(patchRes.event)
+  }
+
   return {
     loading,
     error,
@@ -166,5 +179,6 @@ export function useScheduleApi() {
     loadBlocks,
     saveEvent,
     deleteEvent,
+    setEventCancelled,
   }
 }

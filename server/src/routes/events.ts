@@ -19,6 +19,7 @@ import {
   collectEventCancelRecipients,
   diffParticipantIds,
   notifyEventCancelled,
+  notifyEventRestored,
   notifyEventUpdated,
   notifyParticipantsAdded,
   notifyParticipantsRemoved,
@@ -54,6 +55,7 @@ const createEventSchema = z.object({
   hidden: z.boolean().optional(),
   attachmentsHidden: z.boolean().optional(),
   completed: z.boolean().optional(),
+  cancelled: z.boolean().optional(),
   createdAt: z.string().optional(),
   creatorExternalId: z.number().int().positive().nullable().optional(),
   /** @deprecated используйте creatorExternalId */
@@ -326,21 +328,42 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
         meta: updateLog.meta,
       }, request.log)
 
-      const participantDiff = diffParticipantIds(
-        existing.participantIds,
-        event.participantIds,
-      )
-      notifyParticipantsAdded(event, participantDiff.added)
-      notifyParticipantsRemoved(event, participantDiff.removed)
+      const becameCancelled = !existing.cancelled && event.cancelled
+      const wasRestored = existing.cancelled && !event.cancelled
 
-      const continuingParticipants = event.participantIds.filter(
-        id => existing.participantIds.includes(id),
-      )
-      notifyEventUpdated(
-        event,
-        updateLog.meta.changes,
-        continuingParticipants,
-      )
+      if (becameCancelled) {
+        try {
+          const recipients = collectEventCancelRecipients(event)
+          notifyEventCancelled(event, recipients)
+        } catch (err) {
+          request.log.error({ err, eventId: id }, 'event cancel notifications failed')
+        }
+      }
+      else if (wasRestored) {
+        try {
+          const recipients = collectEventCancelRecipients(event)
+          notifyEventRestored(event, recipients)
+        } catch (err) {
+          request.log.error({ err, eventId: id }, 'event restore notifications failed')
+        }
+      }
+      else {
+        const participantDiff = diffParticipantIds(
+          existing.participantIds,
+          event.participantIds,
+        )
+        notifyParticipantsAdded(event, participantDiff.added)
+        notifyParticipantsRemoved(event, participantDiff.removed)
+
+        const continuingParticipants = event.participantIds.filter(
+          id => existing.participantIds.includes(id),
+        )
+        notifyEventUpdated(
+          event,
+          updateLog.meta.changes,
+          continuingParticipants,
+        )
+      }
 
       try {
         return { success: true, event: await enrichEvent(event, crm, profile) }
@@ -374,7 +397,7 @@ export const eventsRoutes: FastifyPluginAsync = async app => {
       const cancelRecipients = collectEventCancelRecipients(existing)
       let notified = 0
       try {
-        notified = notifyEventCancelled(existing, cancelRecipients)
+        notified = notifyEventCancelled(existing, cancelRecipients, { eventId: null })
         request.log.info({
           eventId: id,
           recipientExternalIds: cancelRecipients,

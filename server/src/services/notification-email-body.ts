@@ -22,6 +22,8 @@ function emailIntro(type: NotificationType): string {
       return 'Вы исключены из списка участников мероприятия.'
     case 'event.cancelled':
       return 'Мероприятие, в котором вы участвовали, отменено.'
+    case 'event.restored':
+      return 'Ранее отменённое мероприятие снова актуально.'
     case 'event.updated':
       return 'В мероприятии, в котором вы участвуете, произошли изменения.'
     case 'event.reminder':
@@ -36,6 +38,7 @@ export function buildNotificationEmailSubject(notification: NotificationRow): st
     'event.added': 'Приглашение на мероприятие',
     'event.removed': 'Исключение из мероприятия',
     'event.cancelled': 'Мероприятие отменено',
+    'event.restored': 'Мероприятие восстановлено',
     'event.updated': 'Изменения в мероприятии',
     'event.reminder': 'Скоро начало мероприятия',
   }

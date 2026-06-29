@@ -46,6 +46,7 @@ export interface ApiEvent {
   hidden: boolean
   attachmentsHidden: boolean
   completed: boolean
+  cancelled: boolean
   createdAt: string | null
   creatorExternalId: number | null
   attachmentsLabel: string

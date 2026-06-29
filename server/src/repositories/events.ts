@@ -22,6 +22,7 @@ interface EventRow {
   hidden: number
   attachments_hidden: number
   completed: number
+  cancelled: number
   created_at: string | null
   organizer_external_id: number | null
   attachments_label: string
@@ -60,6 +61,7 @@ function mapEvent(row: EventRow): EventRecord {
     hidden: row.hidden === 1,
     attachmentsHidden: row.attachments_hidden === 1,
     completed: row.completed === 1,
+    cancelled: row.cancelled === 1,
     createdAt: row.created_at,
     creatorExternalId: row.organizer_external_id,
     attachmentsLabel: row.attachments_label,
@@ -129,9 +131,9 @@ export function createEvent(input: CreateEventInput): EventRecord {
     .prepare(
       `INSERT INTO events (
         substitute_slug, event_date, time, all_day,
-        place_label, place_address, topic, hidden, attachments_hidden, completed,
+        place_label, place_address, topic, hidden, attachments_hidden, completed, cancelled,
         created_at, organizer_external_id, attachments_label, detail_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.substituteSlug,
@@ -144,6 +146,7 @@ export function createEvent(input: CreateEventInput): EventRecord {
       input.hidden ? 1 : 0,
       input.attachmentsHidden ? 1 : 0,
       input.completed ? 1 : 0,
+      input.cancelled ? 1 : 0,
       input.createdAt ?? new Date().toISOString(),
       input.creatorExternalId ?? null,
       'Нет файлов',
@@ -175,6 +178,7 @@ export function updateEvent(id: number, input: UpdateEventInput): EventRecord | 
       hidden = ?,
       attachments_hidden = ?,
       completed = ?,
+      cancelled = ?,
       created_at = ?,
       organizer_external_id = ?,
       detail_json = ?
@@ -190,6 +194,7 @@ export function updateEvent(id: number, input: UpdateEventInput): EventRecord | 
     (input.hidden ?? existing.hidden) ? 1 : 0,
     (input.attachmentsHidden ?? existing.attachmentsHidden) ? 1 : 0,
     (input.completed ?? existing.completed) ? 1 : 0,
+    (input.cancelled ?? existing.cancelled) ? 1 : 0,
     input.createdAt ?? existing.createdAt,
     existing.creatorExternalId,
     input.detail !== undefined

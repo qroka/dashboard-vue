@@ -48,6 +48,7 @@ export interface ScheduleRow {
   attachmentFiles: ScheduleAttachmentFile[]
   hidden?: boolean
   attachmentsHidden?: boolean
+  cancelled?: boolean
   /** Скрытое мероприятие для исполнителя — только время в списке. */
   viewRestricted?: boolean
   /** Скрытые файлы для исполнителя — в списке только количество. */

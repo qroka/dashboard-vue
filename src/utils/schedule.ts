@@ -262,6 +262,7 @@ export function createEmptyScheduleRow(blockDate?: string): ScheduleRow {
     attachmentFiles: [],
     hidden: false,
     attachmentsHidden: false,
+    cancelled: false,
     detail: {
       date,
       allDay: false
@@ -303,6 +304,7 @@ export function cloneScheduleRowForCopy(
     attachmentFiles: [],
     hidden: Boolean(source.hidden),
     attachmentsHidden: Boolean(source.attachmentsHidden),
+    cancelled: false,
     detail: {
       date: targetDate ?? '',
       allDay: Boolean(source.detail?.allDay),
@@ -517,6 +519,7 @@ export function scheduleRowMatchesFilters(
       row.placeAddress,
       formatSchedulePlace(row),
       formatScheduleRowTime(row),
+      SCHEDULE_CANCELLED_LABEL,
       row.time,
       row.attachmentsLabel,
       ...row.attachmentFiles.map(f => f.name),
@@ -550,6 +553,11 @@ export function parseScheduleRowTimeMinutes(time: string): number {
 }
 
 export const SCHEDULE_ALL_DAY_LABEL = 'Весь день'
+export const SCHEDULE_CANCELLED_LABEL = 'ОТМЕНЕНО'
+
+export function isScheduleRowCancelled(row: ScheduleRow): boolean {
+  return Boolean(row.cancelled)
+}
 
 export function isScheduleRowAllDay(row: ScheduleRow): boolean {
   return Boolean(row.detail?.allDay)
@@ -562,7 +570,9 @@ export function formatScheduleRowTime(row: ScheduleRow): string {
 
 /** Сортировка: мероприятия на весь день — в начале дня. */
 export function scheduleRowSortMinutes(row: ScheduleRow): number {
-  if (isScheduleRowAllDay(row))
+  if (isScheduleRowCancelled(row))
+    return Number.MAX_SAFE_INTEGER
+  if (row.detail?.allDay)
     return -1
   return parseScheduleRowTimeMinutes(row.time)
 }

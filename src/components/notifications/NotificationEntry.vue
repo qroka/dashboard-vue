@@ -16,6 +16,7 @@ const icon = computed(() => {
     'event.added': 'i-lucide-user-plus',
     'event.removed': 'i-lucide-user-minus',
     'event.cancelled': 'i-lucide-calendar-x',
+    'event.restored': 'i-lucide-calendar-check',
     'event.updated': 'i-lucide-pencil-line',
     'event.reminder': 'i-lucide-bell-ring',
   }

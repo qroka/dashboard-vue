@@ -36,7 +36,7 @@ function notifyExternalUsers(
   externalIds: number[],
   options: {
     excludeExternalUserId?: number | null
-    type: 'event.added' | 'event.removed' | 'event.cancelled' | 'event.updated' | 'event.reminder'
+    type: 'event.added' | 'event.removed' | 'event.cancelled' | 'event.restored' | 'event.updated' | 'event.reminder'
     title: string
     body: string
     event: EventRecord
@@ -118,6 +118,7 @@ export function collectEventCancelRecipients(event: EventRecord): number[] {
 export function notifyEventCancelled(
   event: EventRecord,
   participantExternalIds: number[],
+  options?: { eventId?: number | null },
 ): number {
   if (!participantExternalIds.length)
     return 0
@@ -128,8 +129,23 @@ export function notifyEventCancelled(
     title: 'Мероприятие отменено',
     body: `«${event.topic}»\n${when}`,
     event,
-    // Событие удаляется — не привязываем уведомление к event_id (FK + ON DELETE SET NULL).
-    eventId: null,
+    eventId: options?.eventId !== undefined ? options.eventId : event.id,
+  })
+}
+
+export function notifyEventRestored(
+  event: EventRecord,
+  participantExternalIds: number[],
+): number {
+  if (!participantExternalIds.length)
+    return 0
+
+  const when = eventWhenLabel(event)
+  return notifyExternalUsers(participantExternalIds, {
+    type: 'event.restored',
+    title: 'Мероприятие восстановлено',
+    body: `«${event.topic}»\n${when}`,
+    event,
   })
 }
 
