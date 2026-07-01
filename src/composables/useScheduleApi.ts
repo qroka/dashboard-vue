@@ -7,6 +7,7 @@ import { apiFetch } from '../api/client'
 import {
   apiEventToScheduleRow,
   buildArchiveBlocksFromEvents,
+  buildScheduleBlocksFromTodayThroughEvents,
   mergeEventsIntoBlocks,
   scheduleRowToApiPayload,
 } from '../api/schedule-mapper'
@@ -15,6 +16,7 @@ import type {
   ScheduleAttachmentFile,
   ScheduleDateBlock,
   ScheduleRow,
+  ScheduleTitleValue,
   ScheduleUserGroup,
 } from '../types/schedule'
 import { assertUploadFilesValid } from '../config/uploads'
@@ -69,7 +71,10 @@ export function useScheduleApi() {
   const error = ref<string | null>(null)
   const events = ref<ApiEvent[]>([])
 
-  async function loadBlocks(range?: ScheduleDateBlocksRange): Promise<ScheduleDateBlock[]> {
+  async function loadBlocks(
+    range?: ScheduleDateBlocksRange,
+    scope: ScheduleTitleValue = 'general',
+  ): Promise<ScheduleDateBlock[]> {
     loading.value = true
     error.value = null
     try {
@@ -88,12 +93,12 @@ export function useScheduleApi() {
         return blocks
       }
 
-      const blocks = createScheduleDateBlocks(range ?? {})
+      const blocks = buildScheduleBlocksFromTodayThroughEvents(res.events, scope)
       mergeEventsIntoBlocks(blocks, res.events)
       return blocks
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Не удалось загрузить график'
-      return createScheduleDateBlocks(range ?? {})
+      return buildScheduleBlocksFromTodayThroughEvents([], scope)
     } finally {
       loading.value = false
     }

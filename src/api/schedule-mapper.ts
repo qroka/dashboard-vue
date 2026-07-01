@@ -9,6 +9,7 @@ import type {
 } from '../types/schedule'
 import {
   buildSchedulePlaceQuickOptions,
+  buildScheduleBlocksFromTodayThroughEventDates,
   createScheduleDateBlocks,
   buildArchiveBlocksFromEventDates,
   ensureScheduleBlockForDate,
@@ -124,6 +125,24 @@ export function buildArchiveBlocksFromEvents(events: ApiEvent[]): ScheduleDateBl
     dates.push(event.eventDate)
   }
   return buildArchiveBlocksFromEventDates(dates)
+}
+
+export function buildScheduleBlocksFromTodayThroughEvents(
+  events: ApiEvent[],
+  scope: ScheduleTitleValue,
+): ScheduleDateBlock[] {
+  const filtered = scope === 'general'
+    ? events
+    : events.filter(event => event.substituteSlug === scope)
+
+  const dates: string[] = []
+  for (const event of filtered) {
+    if (!isScheduleSubstituteSlug(event.substituteSlug))
+      continue
+    dates.push(event.eventDate)
+  }
+
+  return buildScheduleBlocksFromTodayThroughEventDates(dates)
 }
 
 export function buildSchedulePlaceQuickOptionsFromEvents(

@@ -662,7 +662,7 @@ export function parseScheduleDayBlockTitle(title: string): ScheduleDayBlockTitle
   return null
 }
 
-/** Сколько дней вперёд от сегодня показывать в графике. */
+/** Сколько дней показывать в режиме перехода к дате в архиве. */
 export const SCHEDULE_FUTURE_DAYS = 7
 
 /** @deprecated Используйте SCHEDULE_FUTURE_DAYS */
@@ -830,6 +830,29 @@ export function createScheduleDateBlocks(
     currentAndFuture.push(buildScheduleDateBlock(ref.add({ days: offset })))
 
   return currentAndFuture
+}
+
+/** Блоки от сегодня до самой поздней даты в списке (включительно, все дни подряд). */
+export function buildScheduleBlocksFromTodayThroughEventDates(dateStrs: string[]): ScheduleDateBlock[] {
+  const todayDate = today(getLocalTimeZone())
+  let maxDate = todayDate
+
+  for (const dateStr of dateStrs) {
+    const parsed = parseScheduleDateString(dateStr)
+    if (!parsed || parsed.compare(todayDate) < 0)
+      continue
+    if (parsed.compare(maxDate) > 0)
+      maxDate = parsed
+  }
+
+  const blocks: ScheduleDateBlock[] = []
+  let cursor = todayDate
+  while (cursor.compare(maxDate) <= 0) {
+    blocks.push(buildScheduleDateBlock(cursor))
+    cursor = cursor.add({ days: 1 })
+  }
+
+  return blocks
 }
 
 /** Добавляет блок дня в список, если его ещё нет (уведомления, прошлые даты). */

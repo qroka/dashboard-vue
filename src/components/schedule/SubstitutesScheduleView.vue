@@ -46,7 +46,6 @@ import {
   findScheduleBlockIdByDate,
   findTodayScheduleBlock,
   parseDateFromScheduleBlockTitle,
-  SCHEDULE_FUTURE_DAYS,
   type ScheduleDateBlocksRange,
   parseScheduleSlugFromPath,
   scheduleParticipantKey,
@@ -93,16 +92,17 @@ const scheduleArchiveActive = computed(() =>
   scheduleArchiveEnabled.value || Boolean(scheduleJumpStartDate.value),
 )
 
+const scope = computed<ScheduleTitleValue>(() => parseScheduleSlugFromPath(route.path))
+
 const scheduleBlocksRange = computed((): ScheduleDateBlocksRange => ({
   pastDays: scheduleArchiveEnabled.value && !scheduleJumpStartDate.value
     ? 1
     : 0,
-  futureDays: SCHEDULE_FUTURE_DAYS,
   jumpStartDate: scheduleJumpStartDate.value ?? undefined,
 }))
 
 async function refreshSchedule() {
-  scheduleBlocks.value = await loadBlocks(scheduleBlocksRange.value)
+  scheduleBlocks.value = await loadBlocks(scheduleBlocksRange.value, scope.value)
 }
 
 watch(scheduleBlocksRange, () => {
@@ -112,8 +112,6 @@ watch(scheduleBlocksRange, () => {
 onMounted(async () => {
   await Promise.all([refreshSchedule(), loadParticipants()])
 })
-
-const scope = computed<ScheduleTitleValue>(() => parseScheduleSlugFromPath(route.path))
 
 const schedulePlaceQuickOptions = computed(() =>
   buildSchedulePlaceQuickOptionsFromEvents(scheduleEvents.value, scope.value),
@@ -213,6 +211,8 @@ watch(scope, () => {
   selectedParticipantKeys.value = selectedParticipantKeys.value.filter(key =>
     scheduleParticipants.value.some(p => scheduleParticipantKey(p) === key)
   )
+  if (!scheduleArchiveActive.value)
+    refreshSchedule()
 })
 
 /** «Сегодня 12.05.2026» одним куском (tabular-nums), день недели отдельно. */
