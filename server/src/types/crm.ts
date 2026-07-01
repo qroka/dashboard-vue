@@ -4,6 +4,8 @@ export interface CrmParticipant {
   login: string
   name: string
   email?: string
+  /** u_notes из CRM (доп. адреса для уведомлений). */
+  notes?: string
   phone?: string
   ofo?: string
   avatar?: string

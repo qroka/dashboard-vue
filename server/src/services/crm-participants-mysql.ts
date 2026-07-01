@@ -31,6 +31,7 @@ interface ParticipantRow {
   u_login: string
   u_fio: string
   u_email: string
+  u_notes: string
 }
 
 function mapRow(row: ParticipantRow): CrmParticipant {
@@ -44,6 +45,7 @@ function mapRow(row: ParticipantRow): CrmParticipant {
     login: row.u_login,
     name,
     email: row.u_email?.trim() || undefined,
+    notes: row.u_notes?.trim() || undefined,
     line1,
     line2,
   }
@@ -59,7 +61,7 @@ export async function listParticipantsFromMysql(
 ): Promise<CrmParticipant[]> {
   const db = await getPool(env)
   let sql = `
-    SELECT u_id, u_login, u_fio, u_email
+    SELECT u_id, u_login, u_fio, u_email, COALESCE(u_notes, '') AS u_notes
     FROM user
     WHERE u_active = 1
   `
@@ -84,7 +86,7 @@ export async function getParticipantsByIdsFromMysql(
   const db = await getPool(env)
   const placeholders = ids.map(() => '?').join(',')
   const sql = `
-    SELECT u_id, u_login, u_fio, u_email
+    SELECT u_id, u_login, u_fio, u_email, COALESCE(u_notes, '') AS u_notes
     FROM user
     WHERE u_id IN (${placeholders})
   `

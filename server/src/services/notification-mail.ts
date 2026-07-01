@@ -71,8 +71,25 @@ export async function deliverNotificationEmail(
 
   for (const email of emails) {
     const ok = await sendPlainTextMail(env, config, email, subject, text, mailLogger)
-    if (ok)
+    if (ok) {
       sent++
+    } else {
+      mailLogger?.warn({
+        userId: user.id,
+        login: user.login,
+        email,
+      }, 'notification email not delivered to address')
+    }
+  }
+
+  if (sent < emails.length) {
+    mailLogger?.warn({
+      userId: user.id,
+      login: user.login,
+      resolved: emails.length,
+      sent,
+      emails,
+    }, 'notification email partially delivered')
   }
 
   return sent
